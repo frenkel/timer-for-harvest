@@ -1,0 +1,10 @@
+[package]
+name = "harvest"
+version = "0.1.0"
+authors = ["Frank Groeneveld <frank@frankgroeneveld.nl>"]
+edition = "2018"
+
+[dependencies]
+reqwest = "0.9.18"
+serde = "1.0.99"
+serde_json = "1.0.40"
