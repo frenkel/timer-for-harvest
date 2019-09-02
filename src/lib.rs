@@ -4,7 +4,7 @@ use serde;
 use serde_json;
 
 #[derive(serde::Serialize, serde::Deserialize)]
-pub struct Config {
+pub struct Harvest {
     token: String,
     account_id: u32,
 }
@@ -31,22 +31,45 @@ pub struct ProjectPage {
     pub page: u32,
 }
 
-pub fn load_config() -> Config {
-    let mut file = File::open("config.json").unwrap();
-    let mut content = String::new();
+impl Harvest {
+    pub fn new() -> Harvest {
+        let mut file = File::open("config.json").unwrap();
+        let mut content = String::new();
 
-    file.read_to_string(&mut content).unwrap();
+        file.read_to_string(&mut content).unwrap();
 
-    serde_json::from_str(&content).unwrap()
-}
+        serde_json::from_str(&content).unwrap()
+    }
 
-pub fn api_get_request(config: &Config, url: &str) -> reqwest::Response {
-    let client = reqwest::Client::new();
+    pub fn active_projects(&self) -> Vec<ProjectPage> {
+        let mut projects: Vec<ProjectPage> = Vec::new();
+        let mut current_page = 1;
 
-    client.get(url)
-        .header("Authorization", format!("Bearer {}", config.token))
-        .header("Harvest-Account-Id", format!("{}", config.account_id))
-        .header("User-Agent", "Harvest Linux (TODO)")
-        .send()
-        .unwrap()
+        loop {
+            let url = format!("https://api.harvestapp.com/v2/projects?is_active=true&page={}", current_page);
+            let mut res = self.api_get_request(&url);
+            let body = &res.text().unwrap();
+            let page: ProjectPage = serde_json::from_str(body).unwrap();
+            if current_page == page.total_pages {
+                projects.push(page);
+                break;
+            } else {
+                current_page += 1;
+                projects.push(page);
+            }
+        }
+
+        projects
+    }
+
+    fn api_get_request(&self, url: &str) -> reqwest::Response {
+        let client = reqwest::Client::new();
+
+        client.get(url)
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Harvest-Account-Id", format!("{}", self.account_id))
+            .header("User-Agent", "Harvest Linux (TODO)")
+            .send()
+            .unwrap()
+    }
 }
