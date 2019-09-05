@@ -23,11 +23,21 @@ pub struct Client {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+pub struct Task {
+    pub id: u32,
+    pub name: String,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct TimeEntry {
     pub id: u32,
     pub project: Project,
     pub client: Client,
     pub hours: f32,
+    pub user: User,
+    pub spent_date: String,
+    pub task: Task,
+    pub notes: String,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -46,6 +56,11 @@ pub struct TimeEntryPage {
     pub total_pages: u32,
     pub total_entries: u32,
     pub page: u32,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct User {
+    pub id: u32,
 }
 
 impl Harvest {
@@ -79,14 +94,20 @@ impl Harvest {
         projects
     }
 
-    pub fn time_entries(&self) -> Vec<TimeEntry> {
-        let url = "https://api.harvestapp.com/v2/time_entries";
+    pub fn time_entries(&self, user: User) -> Vec<TimeEntry> {
+        let url = format!("https://api.harvestapp.com/v2/time_entries?user_id={}", user.id);
         let mut res = self.api_get_request(&url);
         let body = &res.text().unwrap();
-            println!("{}", body);
         let page: TimeEntryPage = serde_json::from_str(body).unwrap();
 
         page.time_entries
+    }
+
+    pub fn current_user(&self) -> User {
+        let url = "https://api.harvestapp.com/v2/users/me";
+        let mut res = self.api_get_request(&url);
+        let body = &res.text().unwrap();
+        serde_json::from_str(body).unwrap()
     }
 
     fn api_get_request(&self, url: &str) -> reqwest::Response {
