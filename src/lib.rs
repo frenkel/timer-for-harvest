@@ -2,6 +2,7 @@ use std::io::Read;
 use std::fs::File;
 use serde;
 use serde_json;
+use chrono::Local;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Harvest {
@@ -94,8 +95,9 @@ impl Harvest {
         projects
     }
 
-    pub fn time_entries(&self, user: User) -> Vec<TimeEntry> {
-        let url = format!("https://api.harvestapp.com/v2/time_entries?user_id={}", user.id);
+    pub fn time_entries_today(&self, user: User) -> Vec<TimeEntry> {
+        let now = Local::now().format("%Y-%m-%d");
+        let url = format!("https://api.harvestapp.com/v2/time_entries?user_id={}&from={}&to={}", user.id, now, now);
         let mut res = self.api_get_request(&url);
         let body = &res.text().unwrap();
         let page: TimeEntryPage = serde_json::from_str(body).unwrap();
