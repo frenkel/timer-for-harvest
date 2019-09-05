@@ -13,7 +13,7 @@ pub struct Harvest {
 pub struct Project {
     pub id: u32,
     pub name: String,
-    pub client: Client,
+    pub client: Option<Client>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -23,8 +23,25 @@ pub struct Client {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+pub struct TimeEntry {
+    pub id: u32,
+    pub project: Project,
+    pub client: Client,
+    pub hours: f32,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct ProjectPage {
     pub projects: Vec<Project>,
+    pub per_page: u32,
+    pub total_pages: u32,
+    pub total_entries: u32,
+    pub page: u32,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct TimeEntryPage {
+    pub time_entries: Vec<TimeEntry>,
     pub per_page: u32,
     pub total_pages: u32,
     pub total_entries: u32,
@@ -60,6 +77,16 @@ impl Harvest {
         }
 
         projects
+    }
+
+    pub fn time_entries(&self) -> Vec<TimeEntry> {
+        let url = "https://api.harvestapp.com/v2/time_entries";
+        let mut res = self.api_get_request(&url);
+        let body = &res.text().unwrap();
+            println!("{}", body);
+        let page: TimeEntryPage = serde_json::from_str(body).unwrap();
+
+        page.time_entries
     }
 
     fn api_get_request(&self, url: &str) -> reqwest::Response {
