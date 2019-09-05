@@ -1,8 +1,8 @@
-use std::io::Read;
-use std::fs::File;
+use chrono::Local;
 use serde;
 use serde_json;
-use chrono::Local;
+use std::fs::File;
+use std::io::Read;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Harvest {
@@ -79,7 +79,10 @@ impl Harvest {
         let mut current_page = 1;
 
         loop {
-            let url = format!("https://api.harvestapp.com/v2/projects?is_active=true&page={}", current_page);
+            let url = format!(
+                "https://api.harvestapp.com/v2/projects?is_active=true&page={}",
+                current_page
+            );
             let mut res = self.api_get_request(&url);
             let body = &res.text().unwrap();
             let page: ProjectPage = serde_json::from_str(body).unwrap();
@@ -97,7 +100,10 @@ impl Harvest {
 
     pub fn time_entries_today(&self, user: User) -> Vec<TimeEntry> {
         let now = Local::now().format("%Y-%m-%d");
-        let url = format!("https://api.harvestapp.com/v2/time_entries?user_id={}&from={}&to={}", user.id, now, now);
+        let url = format!(
+            "https://api.harvestapp.com/v2/time_entries?user_id={}&from={}&to={}",
+            user.id, now, now
+        );
         let mut res = self.api_get_request(&url);
         let body = &res.text().unwrap();
         let page: TimeEntryPage = serde_json::from_str(body).unwrap();
@@ -115,7 +121,8 @@ impl Harvest {
     fn api_get_request(&self, url: &str) -> reqwest::Response {
         let client = reqwest::Client::new();
 
-        client.get(url)
+        client
+            .get(url)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
             .header("User-Agent", "Harvest Linux (TODO)")
