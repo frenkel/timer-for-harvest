@@ -41,8 +41,8 @@ impl Harvest {
         serde_json::from_str(&content).unwrap()
     }
 
-    pub fn active_projects(&self) -> Vec<ProjectPage> {
-        let mut projects: Vec<ProjectPage> = Vec::new();
+    pub fn active_projects(&self) -> Vec<Project> {
+        let mut projects: Vec<Project> = vec![];
         let mut current_page = 1;
 
         loop {
@@ -51,11 +51,11 @@ impl Harvest {
             let body = &res.text().unwrap();
             let page: ProjectPage = serde_json::from_str(body).unwrap();
             if current_page == page.total_pages {
-                projects.push(page);
+                projects.extend(page.projects);
                 break;
             } else {
                 current_page += 1;
-                projects.push(page);
+                projects.extend(page.projects);
             }
         }
 
