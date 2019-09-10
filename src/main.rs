@@ -12,12 +12,19 @@ fn build_ui(application: &gtk::Application) {
     window.set_default_size(350, 70);
 
     let button = gtk::Button::new_with_label("Start");
+    let list_store = gtk::ListStore::new(&[gtk::Type::String]);
 
+    list_store.set(&list_store.append(), &[0], &[&"Test".to_string()]);
+    let combo_box = gtk::ComboBox::new_with_model(&list_store);
+    let cell = gtk::CellRendererText::new();
+    combo_box.pack_start(&cell, true);
+    combo_box.add_attribute(&cell, "text", 0);
     button.connect_clicked(|_| {
         print_time_entries();
     });
 
-    window.add(&button);
+    // window.add(&button);
+    window.add(&combo_box);
 
     window.show_all();
 }
