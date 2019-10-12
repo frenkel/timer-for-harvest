@@ -2,8 +2,14 @@ use gio::prelude::*;
 use gtk::prelude::*;
 use harvest::Harvest;
 use std::env::args;
+use std::convert::TryInto;
 
-fn print_time_entries() {
+fn left_aligned_label(text: &str) -> gtk::Label {
+    let label = gtk::Label::new(Some(text));
+    label.set_xalign(0.0);
+    label
+}
+fn load_time_entries() -> gtk::Box {
     let api = Harvest::new();
     /*
         let projects = api.active_projects();
@@ -13,6 +19,8 @@ fn print_time_entries() {
     */
     let user = api.current_user();
     let time_entries = api.time_entries_today(user);
+    let rows = gtk::Box::new(gtk::Orientation::Vertical, time_entries.len().try_into().unwrap());
+
     for time_entry in time_entries {
         println!(
             "{} {}: {} {} at {}",
@@ -22,7 +30,14 @@ fn print_time_entries() {
             time_entry.task.name,
             time_entry.spent_date
         );
+        let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
+        data.pack_start(&left_aligned_label(&time_entry.client.name), true, false, 0);
+        data.pack_start(&left_aligned_label(&time_entry.project.name), true, false, 0);
+        data.pack_start(&left_aligned_label(&time_entry.task.name), true, false, 0);
+        rows.pack_end(&data, true, false, 0);
     }
+
+    rows
 }
 
 pub fn main_window() {
@@ -67,19 +82,28 @@ fn build_ui(application: &gtk::Application) {
 
         popup.connect_delete_event(|_, _| Inhibit(false));
 
+        let list_store = gtk::ListStore::new(&[gtk::Type::String]);
+        /*
+            let api = Harvest::new();
+            let projects = api.active_projects();
+            for project in projects {
+                println!("{} {}", project.client.name, project.name);
+            }
+        */
+        list_store.set(&list_store.append(), &[0], &[&"Test".to_string()]);
+        let combo_box = gtk::ComboBox::new_with_model(&list_store);
+        let cell = gtk::CellRendererText::new();
+        combo_box.pack_start(&cell, true);
+        combo_box.add_attribute(&cell, "text", 0);
+        popup.add(&combo_box);
+
         popup.show_all();
     });
 
-    let list_store = gtk::ListStore::new(&[gtk::Type::String]);
-
-    list_store.set(&list_store.append(), &[0], &[&"Test".to_string()]);
-    let combo_box = gtk::ComboBox::new_with_model(&list_store);
-    let cell = gtk::CellRendererText::new();
-    combo_box.pack_start(&cell, true);
-    combo_box.add_attribute(&cell, "text", 0);
-
     container.pack_start(&button);
-    window.add(&combo_box);
+
+    let time_entries = load_time_entries();
+    window.add(&time_entries);
 
     window.show_all();
 }
