@@ -1,6 +1,7 @@
 use chrono::Local;
 use serde;
 use serde_json;
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
@@ -30,6 +31,13 @@ pub struct Task {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+pub struct TaskAssignment {
+    pub id: u32,
+    pub project: Project,
+    pub task: Task,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct TimeEntry {
     pub id: u32,
     pub project: Project,
@@ -38,7 +46,7 @@ pub struct TimeEntry {
     pub user: User,
     pub spent_date: String,
     pub task: Task,
-    pub notes: String,
+    pub notes: Option<String>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -53,6 +61,15 @@ pub struct ProjectPage {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TimeEntryPage {
     pub time_entries: Vec<TimeEntry>,
+    pub per_page: u32,
+    pub total_pages: u32,
+    pub total_entries: u32,
+    pub page: u32,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct TaskAssignmentPage {
+    pub task_assignments: Vec<TaskAssignment>,
     pub per_page: u32,
     pub total_pages: u32,
     pub total_entries: u32,
@@ -118,11 +135,49 @@ impl Harvest {
         serde_json::from_str(body).unwrap()
     }
 
+    pub fn project_task_assignments(&self, project: &Project) -> Vec<TaskAssignment> {
+        let url = format!(
+            "https://api.harvestapp.com/v2/projects/{}/task_assignments",
+            project.id
+        );
+        let mut res = self.api_get_request(&url);
+        let body = &res.text().unwrap();
+        let page: TaskAssignmentPage = serde_json::from_str(body).unwrap();
+
+        page.task_assignments
+    }
+
+    pub fn start_timer(&self, project: &Project, task: &Task) -> TimeEntry {
+        let url = "https://api.harvestapp.com/v2/time_entries";
+        let mut map = HashMap::new();
+        let now = Local::now().format("%Y-%m-%d");
+        map.insert("project_id", format!("{}", project.id));
+        map.insert("task_id", format!("{}", task.id));
+        map.insert("spent_date", now.to_string());
+
+        let mut res = self.api_post_request(&url, &map);
+        let body = &res.text().unwrap();
+        serde_json::from_str(body).unwrap()
+    }
+
     fn api_get_request(&self, url: &str) -> reqwest::Response {
         let client = reqwest::Client::new();
 
         client
             .get(url)
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Harvest-Account-Id", format!("{}", self.account_id))
+            .header("User-Agent", "Harvest Linux (TODO)")
+            .send()
+            .unwrap()
+    }
+
+    fn api_post_request(&self, url: &str, map: &HashMap<&str, String>) -> reqwest::Response {
+        let client = reqwest::Client::new();
+
+        client
+            .post(url)
+            .json(&map)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
             .header("User-Agent", "Harvest Linux (TODO)")

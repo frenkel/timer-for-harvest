@@ -82,7 +82,6 @@ fn build_ui(application: &gtk::Application) {
         application_clone.add_window(&popup);
         popup.set_transient_for(Some(&window_clone));
         popup.show_all();
-
     });
 
     container.pack_start(&button);
@@ -111,7 +110,11 @@ fn build_popup() -> gtk::Window {
             &list_store.append(),
             &[0, 1],
             &[
-                &format!("{}\n{}", project.client.as_ref().unwrap().name, &project.name),
+                &format!(
+                    "{}\n{}",
+                    project.client.as_ref().unwrap().name,
+                    &project.name
+                ),
                 &project.id,
             ],
         );
@@ -133,14 +136,16 @@ fn build_popup() -> gtk::Window {
 
     let project_chooser_clone = project_chooser.clone();
 
-    start_button.connect_clicked(move |_| {
-        match project_chooser_clone.get_active() {
-            Some(size) => {
-                println!("{}", projects[size as usize].name);
-            }
-            None => {
-                println!("Nothing selected");
-            }
+    start_button.connect_clicked(move |_| match project_chooser_clone.get_active() {
+        Some(size) => {
+            let project = &projects[size as usize];
+            println!("{}", project.name);
+            let task_assignments = api.project_task_assignments(&project);
+            let time_entry = api.start_timer(&project, &task_assignments[0].task);
+            println!("{}", time_entry.project.name);
+        }
+        None => {
+            println!("Nothing selected");
         }
     });
 
