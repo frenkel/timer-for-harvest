@@ -1,8 +1,8 @@
 use gio::prelude::*;
 use gtk::prelude::*;
 use harvest::Harvest;
-use std::env::args;
 use std::convert::TryInto;
+use std::env::args;
 
 fn left_aligned_label(text: &str) -> gtk::Label {
     let label = gtk::Label::new(Some(text));
@@ -19,7 +19,10 @@ fn load_time_entries() -> gtk::Box {
     */
     let user = api.current_user();
     let time_entries = api.time_entries_today(user);
-    let rows = gtk::Box::new(gtk::Orientation::Vertical, time_entries.len().try_into().unwrap());
+    let rows = gtk::Box::new(
+        gtk::Orientation::Vertical,
+        time_entries.len().try_into().unwrap(),
+    );
 
     for time_entry in time_entries {
         println!(
@@ -32,7 +35,12 @@ fn load_time_entries() -> gtk::Box {
         );
         let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
         data.pack_start(&left_aligned_label(&time_entry.client.name), true, false, 0);
-        data.pack_start(&left_aligned_label(&time_entry.project.name), true, false, 0);
+        data.pack_start(
+            &left_aligned_label(&time_entry.project.name),
+            true,
+            false,
+            0,
+        );
         data.pack_start(&left_aligned_label(&time_entry.task.name), true, false, 0);
         rows.pack_end(&data, true, false, 0);
     }
@@ -70,34 +78,11 @@ fn build_ui(application: &gtk::Application) {
     button.connect_clicked(move |_| {
         //print_time_entries();
 
-        let popup = gtk::Window::new(gtk::WindowType::Toplevel);
-
+        let popup = build_popup();
         application_clone.add_window(&popup);
-
-        popup.set_title("Add time entry");
-        popup.set_default_size(400, 200);
-        popup.set_modal(true);
         popup.set_transient_for(Some(&window_clone));
-        popup.set_type_hint(gdk::WindowTypeHint::Dialog);
-
-        popup.connect_delete_event(|_, _| Inhibit(false));
-
-        let list_store = gtk::ListStore::new(&[gtk::Type::String]);
-        /*
-            let api = Harvest::new();
-            let projects = api.active_projects();
-            for project in projects {
-                println!("{} {}", project.client.name, project.name);
-            }
-        */
-        list_store.set(&list_store.append(), &[0], &[&"Test".to_string()]);
-        let combo_box = gtk::ComboBox::new_with_model(&list_store);
-        let cell = gtk::CellRendererText::new();
-        combo_box.pack_start(&cell, true);
-        combo_box.add_attribute(&cell, "text", 0);
-        popup.add(&combo_box);
-
         popup.show_all();
+
     });
 
     container.pack_start(&button);
@@ -106,4 +91,35 @@ fn build_ui(application: &gtk::Application) {
     window.add(&time_entries);
 
     window.show_all();
+}
+
+fn build_popup() -> gtk::Window {
+    let popup = gtk::Window::new(gtk::WindowType::Toplevel);
+
+    popup.set_title("Add time entry");
+    popup.set_default_size(400, 200);
+    popup.set_modal(true);
+    popup.set_type_hint(gdk::WindowTypeHint::Dialog);
+
+    popup.connect_delete_event(|_, _| Inhibit(false));
+
+    let list_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
+    let api = Harvest::new();
+    for project in api.active_projects() {
+        list_store.set(
+            &list_store.append(),
+            &[0, 1],
+            &[
+                &format!("{}\n{}", project.client.unwrap().name, project.name),
+                &project.id,
+            ],
+        );
+    }
+
+    let combo_box = gtk::ComboBox::new_with_model(&list_store);
+    let cell = gtk::CellRendererText::new();
+    combo_box.pack_start(&cell, true);
+    combo_box.add_attribute(&cell, "text", 0);
+    popup.add(&combo_box);
+    popup
 }
