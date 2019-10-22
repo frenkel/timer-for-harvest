@@ -105,21 +105,45 @@ fn build_popup() -> gtk::Window {
 
     let list_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
     let api = Harvest::new();
-    for project in api.active_projects() {
+    let projects = api.active_projects();
+    for project in &projects {
         list_store.set(
             &list_store.append(),
             &[0, 1],
             &[
-                &format!("{}\n{}", project.client.unwrap().name, project.name),
+                &format!("{}\n{}", project.client.as_ref().unwrap().name, &project.name),
                 &project.id,
             ],
         );
     }
 
-    let combo_box = gtk::ComboBox::new_with_model(&list_store);
+    let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
+
+    let project_chooser = gtk::ComboBox::new_with_model(&list_store);
     let cell = gtk::CellRendererText::new();
-    combo_box.pack_start(&cell, true);
-    combo_box.add_attribute(&cell, "text", 0);
-    popup.add(&combo_box);
+    project_chooser.pack_start(&cell, true);
+    project_chooser.add_attribute(&cell, "text", 0);
+    data.pack_start(&project_chooser, true, false, 0);
+
+    let hour_input = gtk::Entry::new();
+    data.pack_start(&hour_input, true, false, 0);
+
+    let start_button = gtk::Button::new_with_label("Start Timer");
+    data.pack_start(&start_button, true, false, 0);
+
+    let project_chooser_clone = project_chooser.clone();
+
+    start_button.connect_clicked(move |_| {
+        match project_chooser_clone.get_active() {
+            Some(size) => {
+                println!("{}", projects[size as usize].name);
+            }
+            None => {
+                println!("Nothing selected");
+            }
+        }
+    });
+
+    popup.add(&data);
     popup
 }
