@@ -142,16 +142,7 @@ fn build_popup() -> gtk::Window {
         task_store_clone.clear();
         match project_chooser_clone.get_active() {
             Some(index) => {
-                let project = project_from_index(&project_store_clone, index);
-                /* TODO remove api init here */
-                let api = Harvest::new();
-                for task_assignment in &api.project_task_assignments(&project) {
-                    task_store_clone.set(
-                        &task_store_clone.append(),
-                        &[0, 1],
-                        &[&task_assignment.task.name, &task_assignment.task.id],
-                    );
-                }
+                load_tasks(&task_store_clone, project_from_index(&project_store_clone, index));
             }
             None => {}
         }
@@ -208,4 +199,16 @@ fn task_from_index(store: &gtk::ListStore, index: u32) -> harvest::Task {
     let id = store.get_value(iter, 1).get::<u32>().unwrap();
     let name = store.get_value(iter, 0).get::<String>().unwrap();
     harvest::Task { id: id, name: name }
+}
+
+fn load_tasks(store: &gtk::ListStore, project: harvest::Project) {
+    /* TODO remove api init here */
+    let api = Harvest::new();
+    for task_assignment in &api.project_task_assignments(&project) {
+        store.set(
+            &store.append(),
+            &[0, 1],
+            &[&task_assignment.task.name, &task_assignment.task.id],
+        );
+    }
 }
