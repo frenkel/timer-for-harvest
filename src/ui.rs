@@ -137,14 +137,17 @@ fn build_popup() -> gtk::Window {
 
     let task_store_clone = task_store.clone();
     let project_chooser_clone = project_chooser.clone();
+    let project_store_clone = project_store.clone();
     project_chooser.connect_changed(move |_| {
         task_store_clone.clear();
         match project_chooser_clone.get_active() {
             Some(index) => {
+                let iter = &project_store_clone.get_iter_from_string(&format!("{}", index)).unwrap();
+                let project_id = project_store_clone.get_value(iter, 1).get::<u32>().unwrap();
+                let project_name = project_store_clone.get_value(iter, 0).get::<String>().unwrap();
+                let project = harvest::Project { id: project_id, client: None, name: project_name };
                 /* TODO remove dupe api & project calls here */
                 let api = Harvest::new();
-                let projects = api.active_projects();
-                let project = &projects[index as usize];
                 for task_assignment in &api.project_task_assignments(&project) {
                     task_store_clone.set(
                         &task_store_clone.append(),
@@ -171,16 +174,18 @@ fn build_popup() -> gtk::Window {
 
     let project_chooser_clone2 = project_chooser.clone();
     let task_chooser_clone2 = task_chooser.clone();
+    let project_store_clone2 = project_store.clone();
 
     start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
         Some(index) => {
             match task_chooser_clone2.get_active() {
                 Some(task_index) => {
-                    /* TODO remove dupe api & project calls here */
+                    let iter = &project_store_clone2.get_iter_from_string(&format!("{}", index)).unwrap();
+                    let project_id = project_store_clone2.get_value(iter, 1).get::<u32>().unwrap();
+                    let project_name = project_store_clone2.get_value(iter, 0).get::<String>().unwrap();
+                    let project = harvest::Project { id: project_id, client: None, name: project_name };
+                    /* TODO remove dupe api calls here */
                     let api = Harvest::new();
-                    let projects = api.active_projects();
-                    let project = &projects[index as usize];
-                    println!("{}", project.name);
                     let task_assignments = api.project_task_assignments(&project);
                     let time_entry = api.start_timer(&project,
                             &task_assignments[task_index as usize].task);
