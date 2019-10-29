@@ -102,12 +102,12 @@ fn build_popup() -> gtk::Window {
 
     popup.connect_delete_event(|_, _| Inhibit(false));
 
-    let list_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
+    let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
     let api = Harvest::new();
     let projects = api.active_projects();
     for project in &projects {
-        list_store.set(
-            &list_store.append(),
+        project_store.set(
+            &project_store.append(),
             &[0, 1],
             &[
                 &format!(
@@ -120,33 +120,76 @@ fn build_popup() -> gtk::Window {
         );
     }
 
-    let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
+    let data = gtk::Box::new(gtk::Orientation::Vertical, 5);
 
-    let project_chooser = gtk::ComboBox::new_with_model(&list_store);
+    let project_chooser = gtk::ComboBox::new_with_model(&project_store);
     let cell = gtk::CellRendererText::new();
     project_chooser.pack_start(&cell, true);
     project_chooser.add_attribute(&cell, "text", 0);
     data.pack_start(&project_chooser, true, false, 0);
 
+    let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
+    let task_chooser = gtk::ComboBox::new_with_model(&task_store);
+    let cell = gtk::CellRendererText::new();
+    task_chooser.pack_start(&cell, true);
+    task_chooser.add_attribute(&cell, "text", 0);
+    data.pack_start(&task_chooser, true, false, 0);
+
+    let task_store_clone = task_store.clone();
+    let project_chooser_clone = project_chooser.clone();
+    project_chooser.connect_changed(move |_| {
+        task_store_clone.clear();
+        match project_chooser_clone.get_active() {
+            Some(index) => {
+                /* TODO remove dupe api & project calls here */
+                let api = Harvest::new();
+                let projects = api.active_projects();
+                let project = &projects[index as usize];
+                for task_assignment in &api.project_task_assignments(&project) {
+                    task_store_clone.set(
+                        &task_store_clone.append(),
+                        &[0, 1],
+                        &[
+                            &task_assignment.task.name,
+                            &task_assignment.task.id,
+                        ],
+                    );
+                }
+            }
+            None => { }
+        }
+    });
+
     let hour_input = gtk::Entry::new();
     data.pack_start(&hour_input, true, false, 0);
+
+    let description_input = gtk::Entry::new();
+    data.pack_start(&description_input, true, false, 0);
 
     let start_button = gtk::Button::new_with_label("Start Timer");
     data.pack_start(&start_button, true, false, 0);
 
-    let project_chooser_clone = project_chooser.clone();
+    let project_chooser_clone2 = project_chooser.clone();
+    let task_chooser_clone2 = task_chooser.clone();
 
-    start_button.connect_clicked(move |_| match project_chooser_clone.get_active() {
-        Some(size) => {
-            let project = &projects[size as usize];
-            println!("{}", project.name);
-            let task_assignments = api.project_task_assignments(&project);
-            let time_entry = api.start_timer(&project, &task_assignments[0].task);
-            println!("{}", time_entry.project.name);
+    start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
+        Some(index) => {
+            match task_chooser_clone2.get_active() {
+                Some(task_index) => {
+                    /* TODO remove dupe api & project calls here */
+                    let api = Harvest::new();
+                    let projects = api.active_projects();
+                    let project = &projects[index as usize];
+                    println!("{}", project.name);
+                    let task_assignments = api.project_task_assignments(&project);
+                    let time_entry = api.start_timer(&project,
+                            &task_assignments[task_index as usize].task);
+                    println!("{}", time_entry.project.name);
+                }
+                None => { }
+            }
         }
-        None => {
-            println!("Nothing selected");
-        }
+        None => { }
     });
 
     popup.add(&data);
