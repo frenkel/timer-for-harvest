@@ -142,24 +142,18 @@ fn build_popup() -> gtk::Window {
         task_store_clone.clear();
         match project_chooser_clone.get_active() {
             Some(index) => {
-                let iter = &project_store_clone.get_iter_from_string(&format!("{}", index)).unwrap();
-                let project_id = project_store_clone.get_value(iter, 1).get::<u32>().unwrap();
-                let project_name = project_store_clone.get_value(iter, 0).get::<String>().unwrap();
-                let project = harvest::Project { id: project_id, client: None, name: project_name };
-                /* TODO remove dupe api & project calls here */
+                let project = project_from_index(&project_store_clone, index);
+                /* TODO remove api init here */
                 let api = Harvest::new();
                 for task_assignment in &api.project_task_assignments(&project) {
                     task_store_clone.set(
                         &task_store_clone.append(),
                         &[0, 1],
-                        &[
-                            &task_assignment.task.name,
-                            &task_assignment.task.id,
-                        ],
+                        &[&task_assignment.task.name, &task_assignment.task.id],
                     );
                 }
             }
-            None => { }
+            None => {}
         }
     });
 
@@ -175,28 +169,43 @@ fn build_popup() -> gtk::Window {
     let project_chooser_clone2 = project_chooser.clone();
     let task_chooser_clone2 = task_chooser.clone();
     let project_store_clone2 = project_store.clone();
+    let task_store_clone2 = task_store.clone();
 
     start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
         Some(index) => {
             match task_chooser_clone2.get_active() {
                 Some(task_index) => {
-                    let iter = &project_store_clone2.get_iter_from_string(&format!("{}", index)).unwrap();
-                    let project_id = project_store_clone2.get_value(iter, 1).get::<u32>().unwrap();
-                    let project_name = project_store_clone2.get_value(iter, 0).get::<String>().unwrap();
-                    let project = harvest::Project { id: project_id, client: None, name: project_name };
-                    /* TODO remove dupe api calls here */
+                    let project = project_from_index(&project_store_clone2, index);
+                    /* TODO remove api init here */
                     let api = Harvest::new();
-                    let task_assignments = api.project_task_assignments(&project);
-                    let time_entry = api.start_timer(&project,
-                            &task_assignments[task_index as usize].task);
+                    let task = task_from_index(&task_store_clone2, task_index);
+                    let time_entry = api.start_timer(&project, &task);
                     println!("{}", time_entry.project.name);
                 }
-                None => { }
+                None => {}
             }
         }
-        None => { }
+        None => {}
     });
 
     popup.add(&data);
     popup
+}
+
+fn project_from_index(store: &gtk::ListStore, index: u32) -> harvest::Project {
+    let iter = &store.get_iter_from_string(&format!("{}", index)).unwrap();
+    let id = store.get_value(iter, 1).get::<u32>().unwrap();
+    let name = store.get_value(iter, 0).get::<String>().unwrap();
+    harvest::Project {
+        id: id,
+        client: None,
+        name: name,
+    }
+}
+
+fn task_from_index(store: &gtk::ListStore, index: u32) -> harvest::Task {
+    let iter = &store.get_iter_from_string(&format!("{}", index)).unwrap();
+    let id = store.get_value(iter, 1).get::<u32>().unwrap();
+    let name = store.get_value(iter, 0).get::<String>().unwrap();
+    harvest::Task { id: id, name: name }
 }
