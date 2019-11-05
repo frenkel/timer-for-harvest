@@ -114,8 +114,7 @@ impl Harvest {
         loop {
             let url = format!(
                 "https://api.harvestapp.com/v2/users/{}/project_assignments?page={}",
-                user.id,
-                current_page
+                user.id, current_page
             );
             let mut res = self.api_get_request(&url);
             let body = &res.text().unwrap();

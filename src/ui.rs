@@ -55,7 +55,7 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
                 window.remove(child);
             }
         }
-        None => { }
+        None => {}
     }
     window.add(&rows);
     window.show_all();
@@ -123,10 +123,7 @@ fn build_popup() -> gtk::Window {
         project_store.set(
             &project_store.append(),
             &[0, 1],
-            &[
-                &project.name,
-                &project.id,
-            ],
+            &[&project.name, &project.id],
         );
     }
 
@@ -152,7 +149,10 @@ fn build_popup() -> gtk::Window {
         task_store_clone.clear();
         match project_chooser_clone.get_active() {
             Some(index) => {
-                load_tasks(&task_store_clone, project_from_index(&project_store_clone, index));
+                load_tasks(
+                    &task_store_clone,
+                    project_from_index(&project_store_clone, index),
+                );
             }
             None => {}
         }
