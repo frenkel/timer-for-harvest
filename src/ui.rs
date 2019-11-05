@@ -104,17 +104,14 @@ fn build_popup() -> gtk::Window {
 
     let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
     let api = Harvest::new();
-    let projects = api.active_projects();
+    let user = api.current_user();
+    let projects = api.active_projects(user);
     for project in &projects {
         project_store.set(
             &project_store.append(),
             &[0, 1],
             &[
-                &format!(
-                    "{}\n{}",
-                    project.client.as_ref().unwrap().name,
-                    &project.name
-                ),
+                &project.name,
                 &project.id,
             ],
         );

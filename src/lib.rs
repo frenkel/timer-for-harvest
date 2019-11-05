@@ -19,6 +19,12 @@ pub struct Project {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+pub struct ProjectAssignment {
+    pub id: u32,
+    pub project: Project,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct Client {
     pub id: u32,
     pub name: String,
@@ -59,6 +65,15 @@ pub struct ProjectPage {
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
+pub struct ProjectAssignmentPage {
+    pub project_assignments: Vec<ProjectAssignment>,
+    pub per_page: u32,
+    pub total_pages: u32,
+    pub total_entries: u32,
+    pub page: u32,
+}
+
+#[derive(serde::Serialize, serde::Deserialize)]
 pub struct TimeEntryPage {
     pub time_entries: Vec<TimeEntry>,
     pub per_page: u32,
@@ -91,24 +106,26 @@ impl Harvest {
         serde_json::from_str(&content).unwrap()
     }
 
-    pub fn active_projects(&self) -> Vec<Project> {
+    pub fn active_projects(&self, user: User) -> Vec<Project> {
         let mut projects: Vec<Project> = vec![];
         let mut current_page = 1;
 
         loop {
             let url = format!(
-                "https://api.harvestapp.com/v2/projects?is_active=true&page={}",
+                "https://api.harvestapp.com/v2/users/{}/project_assignments?page={}",
+                user.id,
                 current_page
             );
             let mut res = self.api_get_request(&url);
             let body = &res.text().unwrap();
-            let page: ProjectPage = serde_json::from_str(body).unwrap();
+            let page: ProjectAssignmentPage = serde_json::from_str(body).unwrap();
+            for project_assignment in page.project_assignments {
+                projects.push(project_assignment.project);
+            }
             if current_page == page.total_pages {
-                projects.extend(page.projects);
                 break;
             } else {
                 current_page += 1;
-                projects.extend(page.projects);
             }
         }
 
