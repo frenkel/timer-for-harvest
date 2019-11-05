@@ -9,7 +9,7 @@ fn left_aligned_label(text: &str) -> gtk::Label {
     label.set_xalign(0.0);
     label
 }
-fn load_time_entries() -> gtk::Box {
+fn load_time_entries(window: &gtk::ApplicationWindow) -> gtk::Box {
     /* TODO remove api init here */
     let api = Harvest::new();
     let user = api.current_user();
@@ -36,10 +36,15 @@ fn load_time_entries() -> gtk::Box {
             button.set_label("Stop");
         } else {
             button.set_label("Start");
+            let window_clone = window.clone();
             button.connect_clicked(move |_| {
                 /* TODO remove api init here */
                 let api = Harvest::new();
                 api.restart_timer(&time_entry);
+                let time_entries = load_time_entries(&window_clone.clone());
+                window_clone.remove(window_clone.get_children().first().unwrap());
+                window_clone.add(&time_entries);
+                window_clone.show_all();
             });
         };
 
@@ -84,7 +89,7 @@ fn build_ui(application: &gtk::Application) {
         popup.show_all();
         let window_clone2 = window_clone.clone();
         popup.connect_delete_event(move |_, _| {
-            let time_entries = load_time_entries();
+            let time_entries = load_time_entries(&window_clone2.clone());
             window_clone2.remove(window_clone2.get_children().first().unwrap());
             window_clone2.add(&time_entries);
             window_clone2.show_all();
@@ -94,7 +99,7 @@ fn build_ui(application: &gtk::Application) {
 
     container.pack_start(&button);
 
-    let time_entries = load_time_entries();
+    let time_entries = load_time_entries(&window.clone());
     window.add(&time_entries);
 
     window.show_all();
