@@ -148,14 +148,17 @@ fn build_popup() -> gtk::Window {
         }
     });
 
-    let hour_input = gtk::Entry::new();
-    data.pack_start(&hour_input, true, false, 0);
-
+    let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
     let description_input = gtk::Entry::new();
-    data.pack_start(&description_input, true, false, 0);
+    inputs.pack_start(&description_input, true, true, 0);
+
+    let hour_input = gtk::Entry::new();
+    inputs.pack_start(&hour_input, false, false, 0);
+
+    data.pack_start(&inputs, true, false, 0);
 
     let start_button = gtk::Button::new_with_label("Start Timer");
-    data.pack_start(&start_button, true, false, 0);
+    data.pack_start(&start_button, false, false, 0);
 
     let project_chooser_clone2 = project_chooser.clone();
     let task_chooser_clone2 = task_chooser.clone();
