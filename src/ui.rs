@@ -11,12 +11,6 @@ fn left_aligned_label(text: &str) -> gtk::Label {
 }
 fn load_time_entries() -> gtk::Box {
     let api = Harvest::new();
-    /*
-        let projects = api.active_projects();
-        for project in projects {
-            println!("{} {}", project.client.name, project.name);
-        }
-    */
     let user = api.current_user();
     let time_entries = api.time_entries_today(user);
     let rows = gtk::Box::new(
@@ -25,14 +19,6 @@ fn load_time_entries() -> gtk::Box {
     );
 
     for time_entry in time_entries {
-        println!(
-            "{} {}: {} {} at {}",
-            time_entry.client.name,
-            time_entry.project.name,
-            time_entry.hours,
-            time_entry.task.name,
-            time_entry.spent_date
-        );
         let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
         data.pack_start(&left_aligned_label(&time_entry.client.name), true, false, 0);
         data.pack_start(
@@ -76,12 +62,18 @@ fn build_ui(application: &gtk::Application) {
     let application_clone = application.clone();
     let window_clone = window.clone();
     button.connect_clicked(move |_| {
-        //print_time_entries();
-
         let popup = build_popup();
         application_clone.add_window(&popup);
         popup.set_transient_for(Some(&window_clone));
         popup.show_all();
+        let window_clone2 = window_clone.clone();
+        popup.connect_delete_event(move |_, _| {
+            let time_entries = load_time_entries();
+            window_clone2.remove(window_clone2.get_children().first().unwrap());
+            window_clone2.add(&time_entries);
+            window_clone2.show_all();
+            Inhibit(false)
+        });
     });
 
     container.pack_start(&button);
@@ -161,6 +153,7 @@ fn build_popup() -> gtk::Window {
     let task_chooser_clone2 = task_chooser.clone();
     let project_store_clone2 = project_store.clone();
     let task_store_clone2 = task_store.clone();
+    let popup_clone = popup.clone();
 
     start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
         Some(index) => {
@@ -170,8 +163,8 @@ fn build_popup() -> gtk::Window {
                     /* TODO remove api init here */
                     let api = Harvest::new();
                     let task = task_from_index(&task_store_clone2, task_index);
-                    let time_entry = api.start_timer(&project, &task);
-                    println!("{}", time_entry.project.name);
+                    api.start_timer(&project, &task);
+                    popup_clone.close();
                 }
                 None => {}
             }
