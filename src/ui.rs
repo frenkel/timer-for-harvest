@@ -10,6 +10,7 @@ fn left_aligned_label(text: &str) -> gtk::Label {
     label
 }
 fn load_time_entries() -> gtk::Box {
+    /* TODO remove api init here */
     let api = Harvest::new();
     let user = api.current_user();
     let time_entries = api.time_entries_today(user);
@@ -19,6 +20,7 @@ fn load_time_entries() -> gtk::Box {
     );
 
     for time_entry in time_entries {
+        let row = gtk::Box::new(gtk::Orientation::Horizontal, 2);
         let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
         data.pack_start(&left_aligned_label(&time_entry.client.name), true, false, 0);
         data.pack_start(
@@ -28,7 +30,21 @@ fn load_time_entries() -> gtk::Box {
             0,
         );
         data.pack_start(&left_aligned_label(&time_entry.task.name), true, false, 0);
-        rows.pack_end(&data, true, false, 0);
+        row.pack_start(&data, true, false, 0);
+        let button = gtk::Button::new();
+        if time_entry.is_running {
+            button.set_label("Stop");
+        } else {
+            button.set_label("Start");
+            button.connect_clicked(move |_| {
+                /* TODO remove api init here */
+                let api = Harvest::new();
+                api.restart_timer(&time_entry);
+            });
+        };
+
+        row.pack_start(&button, true, false, 0);
+        rows.pack_end(&row, true, false, 0);
     }
 
     rows

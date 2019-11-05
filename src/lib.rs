@@ -53,6 +53,7 @@ pub struct TimeEntry {
     pub spent_date: String,
     pub task: Task,
     pub notes: Option<String>,
+    pub is_running: bool,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -177,6 +178,17 @@ impl Harvest {
         serde_json::from_str(body).unwrap()
     }
 
+    pub fn restart_timer(&self, time_entry: &TimeEntry) -> TimeEntry {
+        let url = format!(
+            "https://api.harvestapp.com/v2/time_entries/{}/restart",
+            time_entry.id
+        );
+
+        let mut res = self.api_patch_request(&url);
+        let body = &res.text().unwrap();
+        serde_json::from_str(body).unwrap()
+    }
+
     fn api_get_request(&self, url: &str) -> reqwest::Response {
         let client = reqwest::Client::new();
 
@@ -195,6 +207,18 @@ impl Harvest {
         client
             .post(url)
             .json(&map)
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Harvest-Account-Id", format!("{}", self.account_id))
+            .header("User-Agent", "Harvest Linux (TODO)")
+            .send()
+            .unwrap()
+    }
+
+    fn api_patch_request(&self, url: &str) -> reqwest::Response {
+        let client = reqwest::Client::new();
+
+        client
+            .patch(url)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
             .header("User-Agent", "Harvest Linux (TODO)")
