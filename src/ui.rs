@@ -188,7 +188,7 @@ fn build_popup() -> gtk::Window {
                         &project,
                         &task,
                         &notes_input.get_text().unwrap(),
-                        &hour_input.get_text().unwrap(),
+                        duration_str_to_f32(&hour_input.get_text().unwrap()),
                     );
                     popup_clone.close();
                 }
@@ -230,4 +230,13 @@ fn load_tasks(store: &gtk::ListStore, project: harvest::Project) {
             &[&task_assignment.task.name, &task_assignment.task.id],
         );
     }
+}
+
+fn duration_str_to_f32(duration: &str) -> f32 {
+    let mut parts = duration.split(":");
+    /* TODO handle errors */
+    let hours: f32 = parts.next().unwrap().parse().unwrap();
+    /* TODO handle errors */
+    let minutes: f32 = parts.next().unwrap().parse().unwrap();
+    hours + minutes / 60.0
 }

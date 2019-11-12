@@ -62,7 +62,7 @@ pub struct Timer {
     pub task_id: u32,
     pub spent_date: String,
     pub notes: Option<String>,
-    pub hours: Option<String>, /* TODO convert to float */
+    pub hours: Option<f32>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -178,7 +178,7 @@ impl Harvest {
         project: &Project,
         task: &Task,
         notes: &str,
-        hours: &str,
+        hours: f32,
     ) -> TimeEntry {
         let url = "https://api.harvestapp.com/v2/time_entries";
         let now = Local::now().format("%Y-%m-%d");
@@ -192,8 +192,8 @@ impl Harvest {
         if notes.len() > 0 {
             timer.notes = Some(notes.to_string());
         }
-        if hours.len() > 0 {
-            timer.hours = Some(hours.to_string());
+        if hours > 0.0 {
+            timer.hours = Some(hours);
         }
 
         let mut res = self.api_post_request(&url, &timer);
