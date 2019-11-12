@@ -159,8 +159,8 @@ fn build_popup() -> gtk::Window {
     });
 
     let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
-    let description_input = gtk::Entry::new();
-    inputs.pack_start(&description_input, true, true, 0);
+    let notes_input = gtk::Entry::new();
+    inputs.pack_start(&notes_input, true, true, 0);
 
     let hour_input = gtk::Entry::new();
     inputs.pack_start(&hour_input, false, false, 0);
@@ -184,7 +184,12 @@ fn build_popup() -> gtk::Window {
                     /* TODO remove api init here */
                     let api = Harvest::new();
                     let task = task_from_index(&task_store_clone2, task_index);
-                    api.start_timer(&project, &task);
+                    api.start_timer(
+                        &project,
+                        &task,
+                        &notes_input.get_text().unwrap(),
+                        &hour_input.get_text().unwrap(),
+                    );
                     popup_clone.close();
                 }
                 None => {}

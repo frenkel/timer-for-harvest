@@ -164,13 +164,25 @@ impl Harvest {
         page.task_assignments
     }
 
-    pub fn start_timer(&self, project: &Project, task: &Task) -> TimeEntry {
+    pub fn start_timer(
+        &self,
+        project: &Project,
+        task: &Task,
+        notes: &str,
+        hours: &str,
+    ) -> TimeEntry {
         let url = "https://api.harvestapp.com/v2/time_entries";
         let mut map = HashMap::new();
         let now = Local::now().format("%Y-%m-%d");
         map.insert("project_id", format!("{}", project.id));
         map.insert("task_id", format!("{}", task.id));
         map.insert("spent_date", now.to_string());
+        if notes.len() > 0 {
+            map.insert("notes", notes.to_string());
+        }
+        if hours.len() > 0 {
+            map.insert("hours", hours.to_string());
+        }
 
         let mut res = self.api_post_request(&url, &map);
         let body = &res.text().unwrap();
