@@ -1,7 +1,6 @@
 use chrono::Local;
 use serde;
 use serde_json;
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
 
@@ -54,6 +53,16 @@ pub struct TimeEntry {
     pub task: Task,
     pub notes: Option<String>,
     pub is_running: bool,
+}
+
+/* a partially filled TimeEntry with id's instead of objects (Project etc) */
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct Timer {
+    pub project_id: u32,
+    pub task_id: u32,
+    pub spent_date: String,
+    pub notes: Option<String>,
+    pub hours: Option<String>, /* TODO convert to float */
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -172,19 +181,22 @@ impl Harvest {
         hours: &str,
     ) -> TimeEntry {
         let url = "https://api.harvestapp.com/v2/time_entries";
-        let mut map = HashMap::new();
         let now = Local::now().format("%Y-%m-%d");
-        map.insert("project_id", format!("{}", project.id));
-        map.insert("task_id", format!("{}", task.id));
-        map.insert("spent_date", now.to_string());
+        let mut timer = Timer {
+            project_id: project.id,
+            task_id: task.id,
+            spent_date: now.to_string(),
+            notes: None,
+            hours: None,
+        };
         if notes.len() > 0 {
-            map.insert("notes", notes.to_string());
+            timer.notes = Some(notes.to_string());
         }
         if hours.len() > 0 {
-            map.insert("hours", hours.to_string());
+            timer.hours = Some(hours.to_string());
         }
 
-        let mut res = self.api_post_request(&url, &map);
+        let mut res = self.api_post_request(&url, &timer);
         let body = &res.text().unwrap();
         serde_json::from_str(body).unwrap()
     }
@@ -212,12 +224,16 @@ impl Harvest {
             .unwrap()
     }
 
-    fn api_post_request(&self, url: &str, map: &HashMap<&str, String>) -> reqwest::Response {
+    fn api_post_request<T: serde::Serialize + ?Sized>(
+        &self,
+        url: &str,
+        json: &T,
+    ) -> reqwest::Response {
         let client = reqwest::Client::new();
 
         client
             .post(url)
-            .json(&map)
+            .json(&json)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
             .header("User-Agent", "Harvest Linux (TODO)")
