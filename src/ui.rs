@@ -3,6 +3,7 @@ use gtk::prelude::*;
 use harvest::Harvest;
 use std::convert::TryInto;
 use std::env::args;
+use std::rc::Rc;
 
 fn left_aligned_label(text: &str) -> gtk::Label {
     let label = gtk::Label::new(Some(text));
@@ -33,12 +34,14 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
         row.pack_start(&data, true, false, 0);
         let button = gtk::Button::new();
         let window_clone = window.clone();
-        if time_entry.is_running {
+        let rc = Rc::new(time_entry);
+        let time_entry_clone = Rc::clone(&rc);
+        if time_entry_clone.is_running {
             button.set_label("Stop");
             button.connect_clicked(move |_| {
                 /* TODO remove api init here */
                 let api = Harvest::new();
-                api.stop_timer(&time_entry);
+                api.stop_timer(&time_entry_clone);
                 load_time_entries(&window_clone.clone());
             });
         } else {
@@ -46,12 +49,23 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
             button.connect_clicked(move |_| {
                 /* TODO remove api init here */
                 let api = Harvest::new();
-                api.restart_timer(&time_entry);
+                api.restart_timer(&time_entry_clone);
                 load_time_entries(&window_clone.clone());
             });
         };
 
         row.pack_start(&button, true, false, 0);
+        let edit_button = gtk::Button::new_with_label("Edit");
+        let window_clone2 = window.clone();
+        edit_button.connect_clicked(move |_| {
+            let popup = build_popup();
+            window_clone2.get_application().unwrap().add_window(&popup);
+            popup.set_transient_for(Some(&window_clone2));
+            popup.show_all();
+            /* TODO set all data in popup */
+            println!("{:?}", rc.project.id);
+        });
+        row.pack_start(&edit_button, true, false, 0);
         rows.pack_end(&row, true, false, 0);
     }
 
