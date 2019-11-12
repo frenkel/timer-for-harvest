@@ -233,10 +233,14 @@ fn load_tasks(store: &gtk::ListStore, project: harvest::Project) {
 }
 
 fn duration_str_to_f32(duration: &str) -> f32 {
-    let mut parts = duration.split(":");
-    /* TODO handle errors */
-    let hours: f32 = parts.next().unwrap().parse().unwrap();
-    /* TODO handle errors */
-    let minutes: f32 = parts.next().unwrap().parse().unwrap();
-    hours + minutes / 60.0
+    if duration.len() > 0 {
+        let mut parts = duration.split(":");
+        /* TODO handle errors */
+        let hours: f32 = parts.next().unwrap().parse().unwrap();
+        /* TODO handle errors */
+        let minutes: f32 = parts.next().unwrap().parse().unwrap();
+        hours + minutes / 60.0
+    } else {
+        0.0
+    }
 }
