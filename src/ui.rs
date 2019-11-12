@@ -124,7 +124,8 @@ fn build_popup() -> gtk::Window {
     let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
     let api = Harvest::new();
     let user = api.current_user();
-    let projects = api.active_projects(user);
+    let mut projects = api.active_projects(user);
+    projects.sort_by(|a, b| a.name.cmp(&b.name));
     for project in &projects {
         project_store.set(
             &project_store.append(),
