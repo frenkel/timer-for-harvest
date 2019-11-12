@@ -32,11 +32,17 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
         data.pack_start(&left_aligned_label(&time_entry.task.name), true, false, 0);
         row.pack_start(&data, true, false, 0);
         let button = gtk::Button::new();
+        let window_clone = window.clone();
         if time_entry.is_running {
             button.set_label("Stop");
+            button.connect_clicked(move |_| {
+                /* TODO remove api init here */
+                let api = Harvest::new();
+                api.stop_timer(&time_entry);
+                load_time_entries(&window_clone.clone());
+            });
         } else {
             button.set_label("Start");
-            let window_clone = window.clone();
             button.connect_clicked(move |_| {
                 /* TODO remove api init here */
                 let api = Harvest::new();

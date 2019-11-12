@@ -212,6 +212,17 @@ impl Harvest {
         serde_json::from_str(body).unwrap()
     }
 
+    pub fn stop_timer(&self, time_entry: &TimeEntry) -> TimeEntry {
+        let url = format!(
+            "https://api.harvestapp.com/v2/time_entries/{}/stop",
+            time_entry.id
+        );
+
+        let mut res = self.api_patch_request(&url);
+        let body = &res.text().unwrap();
+        serde_json::from_str(body).unwrap()
+    }
+
     fn api_get_request(&self, url: &str) -> reqwest::Response {
         let client = reqwest::Client::new();
 
