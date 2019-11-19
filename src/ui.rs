@@ -218,7 +218,7 @@ fn build_popup(
 
     data.pack_start(&inputs, true, false, 0);
 
-    let start_button = gtk::Button::new_with_label("Start Timer");
+    let start_button = gtk::Button::new();
     data.pack_start(&start_button, false, false, 0);
 
     let project_chooser_clone2 = project_chooser.clone();
@@ -227,27 +227,32 @@ fn build_popup(
     let task_store_clone2 = task_store.clone();
     let popup_clone = popup.clone();
 
-    start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
-        Some(index) => {
-            match task_chooser_clone2.get_active() {
-                Some(task_index) => {
-                    let project = project_from_index(&project_store_clone2, index);
-                    /* TODO remove api init here */
-                    let api = Harvest::new();
-                    let task = task_from_index(&task_store_clone2, task_index);
-                    api.start_timer(
-                        &project,
-                        &task,
-                        &notes_input.get_text().unwrap(),
-                        duration_str_to_f32(&hour_input.get_text().unwrap()),
-                    );
-                    popup_clone.close();
+    if project_id == None {
+        start_button.set_label("Start Timer");
+        start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
+            Some(index) => {
+                match task_chooser_clone2.get_active() {
+                    Some(task_index) => {
+                        let project = project_from_index(&project_store_clone2, index);
+                        /* TODO remove api init here */
+                        let api = Harvest::new();
+                        let task = task_from_index(&task_store_clone2, task_index);
+                        api.start_timer(
+                            &project,
+                            &task,
+                            &notes_input.get_text().unwrap(),
+                            duration_str_to_f32(&hour_input.get_text().unwrap()),
+                        );
+                        popup_clone.close();
+                    }
+                    None => {}
                 }
-                None => {}
             }
-        }
-        None => {}
-    });
+            None => {}
+        });
+    } else {
+        start_button.set_label("Save Timer");
+    }
 
     popup.add(&data);
     popup
