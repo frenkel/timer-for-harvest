@@ -58,12 +58,15 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
         let edit_button = gtk::Button::new_with_label("Edit");
         let window_clone2 = window.clone();
         edit_button.connect_clicked(move |_| {
-            let popup = build_popup();
+            let popup = build_popup(
+                Some(rc.project.id),
+                Some(rc.task.id),
+                &rc.notes.as_ref().unwrap(),
+                rc.hours,
+            );
             window_clone2.get_application().unwrap().add_window(&popup);
             popup.set_transient_for(Some(&window_clone2));
             popup.show_all();
-            /* TODO set all data in popup */
-            println!("{:?}", rc.project.id);
         });
         row.pack_start(&edit_button, true, false, 0);
         rows.pack_end(&row, true, false, 0);
@@ -109,7 +112,7 @@ fn build_ui(application: &gtk::Application) {
     let application_clone = application.clone();
     let window_clone = window.clone();
     button.connect_clicked(move |_| {
-        let popup = build_popup();
+        let popup = build_popup(None, None, &"", 0.0);
         application_clone.add_window(&popup);
         popup.set_transient_for(Some(&window_clone));
         popup.show_all();
@@ -125,7 +128,12 @@ fn build_ui(application: &gtk::Application) {
     load_time_entries(&window.clone());
 }
 
-fn build_popup() -> gtk::Window {
+fn build_popup(
+    project_id: Option<u32>,
+    task_id: Option<u32>,
+    notes: &str,
+    hours: f32,
+) -> gtk::Window {
     let popup = gtk::Window::new(gtk::WindowType::Toplevel);
 
     popup.set_title("Add time entry");
@@ -166,6 +174,7 @@ fn build_popup() -> gtk::Window {
     let task_store_clone = task_store.clone();
     let project_chooser_clone = project_chooser.clone();
     let project_store_clone = project_store.clone();
+    let task_chooser_clone = task_chooser.clone();
     project_chooser.connect_changed(move |_| {
         task_store_clone.clear();
         match project_chooser_clone.get_active() {
@@ -174,17 +183,34 @@ fn build_popup() -> gtk::Window {
                     &task_store_clone,
                     project_from_index(&project_store_clone, index),
                 );
+                match task_id {
+                    Some(id) => {
+                        /* TODO handle failure */
+                        task_chooser_clone
+                            .set_active_iter(Some(&iter_from_id(&task_store_clone, id).unwrap()));
+                    }
+                    None => {}
+                }
             }
             None => {}
         }
     });
+    match project_id {
+        Some(id) => {
+            /* TODO handle failure */
+            project_chooser.set_active_iter(Some(&iter_from_id(&project_store, id).unwrap()));
+        }
+        None => {}
+    }
 
     let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
     let notes_input = gtk::Entry::new();
     inputs.pack_start(&notes_input, true, true, 0);
+    notes_input.set_text(&notes);
 
     let hour_input = gtk::Entry::new();
     inputs.pack_start(&hour_input, false, false, 0);
+    hour_input.set_text(&f32_to_duration_str(hours));
 
     data.pack_start(&inputs, true, false, 0);
 
@@ -234,6 +260,19 @@ fn project_from_index(store: &gtk::ListStore, index: u32) -> harvest::Project {
     }
 }
 
+fn iter_from_id(store: &gtk::ListStore, id: u32) -> Option<gtk::TreeIter> {
+    let iter = store.get_iter_first().unwrap();
+    loop {
+        if store.get_value(&iter, 1).get::<u32>().unwrap() == id {
+            return Some(iter);
+        }
+        if !store.iter_next(&iter) {
+            break;
+        }
+    }
+    None
+}
+
 fn task_from_index(store: &gtk::ListStore, index: u32) -> harvest::Task {
     let iter = &store.get_iter_from_string(&format!("{}", index)).unwrap();
     let id = store.get_value(iter, 1).get::<u32>().unwrap();
@@ -253,6 +292,7 @@ fn load_tasks(store: &gtk::ListStore, project: harvest::Project) {
     }
 }
 
+/* TODO move to TimeEntry */
 fn duration_str_to_f32(duration: &str) -> f32 {
     if duration.len() > 0 {
         let mut parts = duration.split(":");
@@ -264,4 +304,12 @@ fn duration_str_to_f32(duration: &str) -> f32 {
     } else {
         0.0
     }
+}
+
+/* TODO move to TimeEntry */
+fn f32_to_duration_str(duration: f32) -> String {
+    let minutes = duration % 1.0;
+    let hours = duration - minutes;
+
+    format!("{:.0}:{:0<2.0}", hours, minutes * 60.0)
 }
