@@ -163,7 +163,7 @@ impl Harvest {
 
     pub fn project_task_assignments(&self, project: &Project) -> Vec<TaskAssignment> {
         let url = format!(
-            "https://api.harvestapp.com/v2/projects/{}/task_assignments",
+            "https://api.harvestapp.com/v2/projects/{}/task_assignments?is_active=true",
             project.id
         );
         let mut res = self.api_get_request(&url);
