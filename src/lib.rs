@@ -58,11 +58,13 @@ pub struct TimeEntry {
 /* a partially filled TimeEntry with id's instead of objects (Project etc) */
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Timer {
+    pub id: Option<u32>,
     pub project_id: u32,
     pub task_id: u32,
-    pub spent_date: String,
+    pub spent_date: Option<String>,
     pub notes: Option<String>,
     pub hours: Option<f32>,
+    pub is_running: bool
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -183,11 +185,13 @@ impl Harvest {
         let url = "https://api.harvestapp.com/v2/time_entries";
         let now = Local::now().format("%Y-%m-%d");
         let mut timer = Timer {
+            id: None,
             project_id: project.id,
             task_id: task.id,
-            spent_date: now.to_string(),
+            spent_date: Some(now.to_string()),
             notes: None,
             hours: None,
+            is_running: true
         };
         if notes.len() > 0 {
             timer.notes = Some(notes.to_string());
@@ -207,7 +211,7 @@ impl Harvest {
             time_entry.id
         );
 
-        let mut res = self.api_patch_request(&url);
+        let mut res = self.api_patch_request(&url, &());
         let body = &res.text().unwrap();
         serde_json::from_str(body).unwrap()
     }
@@ -218,8 +222,20 @@ impl Harvest {
             time_entry.id
         );
 
-        let mut res = self.api_patch_request(&url);
+        let mut res = self.api_patch_request(&url, &());
         let body = &res.text().unwrap();
+        serde_json::from_str(body).unwrap()
+    }
+
+    pub fn update_timer(&self, timer: &Timer) -> TimeEntry {
+        let url = format!(
+            "https://api.harvestapp.com/v2/time_entries/{}",
+            timer.id.unwrap()
+        );
+
+        let mut res = self.api_patch_request(&url, &timer);
+        let body = &res.text().unwrap();
+        println!("{}", body);
         serde_json::from_str(body).unwrap()
     }
 
@@ -252,11 +268,16 @@ impl Harvest {
             .unwrap()
     }
 
-    fn api_patch_request(&self, url: &str) -> reqwest::Response {
+    fn api_patch_request<T: serde::Serialize + ?Sized>(
+        &self,
+        url: &str,
+        json: &T,
+    ) -> reqwest::Response {
         let client = reqwest::Client::new();
 
         client
             .patch(url)
+            .json(&json)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
             .header("User-Agent", "Harvest Linux (TODO)")
