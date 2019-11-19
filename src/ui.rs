@@ -63,6 +63,7 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
                 Some(rc.task.id),
                 &rc.notes.as_ref().unwrap(),
                 rc.hours,
+                rc.is_running
             );
             window_clone2.get_application().unwrap().add_window(&popup);
             popup.set_transient_for(Some(&window_clone2));
@@ -112,7 +113,7 @@ fn build_ui(application: &gtk::Application) {
     let application_clone = application.clone();
     let window_clone = window.clone();
     button.connect_clicked(move |_| {
-        let popup = build_popup(None, None, &"", 0.0);
+        let popup = build_popup(None, None, &"", 0.0, false);
         application_clone.add_window(&popup);
         popup.set_transient_for(Some(&window_clone));
         popup.show_all();
@@ -134,6 +135,7 @@ fn build_popup(
     task_id: Option<u32>,
     notes: &str,
     hours: f32,
+    is_running: bool
 ) -> gtk::Window {
     let popup = gtk::Window::new(gtk::WindowType::Toplevel);
 
@@ -212,6 +214,7 @@ fn build_popup(
     let hour_input = gtk::Entry::new();
     inputs.pack_start(&hour_input, false, false, 0);
     hour_input.set_text(&f32_to_duration_str(hours));
+    hour_input.set_editable(!is_running);
 
     data.pack_start(&inputs, true, false, 0);
 
