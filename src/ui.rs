@@ -128,6 +128,7 @@ fn build_ui(application: &gtk::Application) {
     load_time_entries(&window.clone());
 }
 
+/* TODO use only TimeEntry argument */
 fn build_popup(
     project_id: Option<u32>,
     task_id: Option<u32>,
