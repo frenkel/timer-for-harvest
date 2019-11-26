@@ -32,7 +32,8 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
             0,
         );
         data.pack_start(&left_aligned_label(&time_entry.task.name), true, false, 0);
-        row.pack_start(&data, true, false, 0);
+        row.pack_start(&data, true, true, 0);
+        row.pack_start(&left_aligned_label(&f32_to_duration_str(time_entry.hours)), false, false, 0);
         let button = gtk::Button::new();
         let window_clone = window.clone();
         let rc = Rc::new(time_entry);
@@ -55,7 +56,7 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
             });
         };
 
-        row.pack_start(&button, true, false, 0);
+        row.pack_start(&button, false, false, 0);
         let edit_button = gtk::Button::new_with_label("Edit");
         let window_clone2 = window.clone();
         edit_button.connect_clicked(move |_| {
@@ -72,7 +73,7 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
             popup.set_transient_for(Some(&window_clone2));
             popup.show_all();
         });
-        row.pack_start(&edit_button, true, false, 0);
+        row.pack_start(&edit_button, false, false, 0);
         rows.pack_end(&row, true, false, 0);
     }
 
