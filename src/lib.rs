@@ -235,7 +235,6 @@ impl Harvest {
 
         let mut res = self.api_patch_request(&url, &timer);
         let body = &res.text().unwrap();
-        println!("{}", body);
         serde_json::from_str(body).unwrap()
     }
 
