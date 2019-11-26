@@ -113,6 +113,16 @@ fn build_ui(application: &gtk::Application) {
     window.set_position(gtk::WindowPosition::Center);
     window.set_default_size(350, 70);
 
+    window.add_events(gdk::EventMask::KEY_PRESS_MASK);
+    window.connect_key_press_event(|window, event| {
+        if event.get_keyval() == 65474 { /* F5 key pressed */
+            load_time_entries(&window);
+            Inhibit(true)
+        } else {
+            Inhibit(false)
+        }
+    });
+
     let button = gtk::Button::new_with_label("Start");
     let application_clone = application.clone();
     let window_clone = window.clone();
