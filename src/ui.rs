@@ -10,6 +10,7 @@ fn left_aligned_label(text: &str) -> gtk::Label {
     label.set_xalign(0.0);
     label
 }
+
 fn load_time_entries(window: &gtk::ApplicationWindow) {
     /* TODO remove api init here */
     let api = Harvest::new();
@@ -25,7 +26,7 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
         let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
         data.pack_start(&left_aligned_label(&time_entry.client.name), true, false, 0);
         data.pack_start(
-            &left_aligned_label(&time_entry.project.name),
+            &left_aligned_label(&name_and_code(&time_entry.project)),
             true,
             false,
             0,
@@ -149,7 +150,12 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
 
     popup.connect_delete_event(|_, _| Inhibit(false));
 
-    let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
+    let project_store = gtk::ListStore::new(&[
+        gtk::Type::String,
+        gtk::Type::U32,
+        gtk::Type::String,
+        gtk::Type::String
+    ]);
     let api = Harvest::new();
     let user = api.current_user();
     let mut projects = api.active_projects(user);
@@ -157,8 +163,8 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     for project in &projects {
         project_store.set(
             &project_store.append(),
-            &[0, 1],
-            &[&project.name, &project.id],
+            &[0, 1, 2, 3],
+            &[&name_and_code(&project), &project.id, &project.code, &project.name],
         );
     }
 
@@ -296,11 +302,13 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
 fn project_from_index(store: &gtk::ListStore, index: u32) -> harvest::Project {
     let iter = &store.get_iter_from_string(&format!("{}", index)).unwrap();
     let id = store.get_value(iter, 1).get::<u32>().unwrap();
-    let name = store.get_value(iter, 0).get::<String>().unwrap();
+    let code = store.get_value(iter, 2).get::<String>().unwrap();
+    let name = store.get_value(iter, 3).get::<String>().unwrap();
     harvest::Project {
         id: id,
         client: None,
         name: name,
+        code: code
     }
 }
 
@@ -356,4 +364,12 @@ fn f32_to_duration_str(duration: f32) -> String {
     let hours = duration - minutes;
 
     format!("{:.0}:{:0<2.0}", hours, minutes * 60.0)
+}
+
+fn name_and_code(project: &harvest::Project) -> String {
+    if project.code == "" {
+        project.name.clone()
+    } else {
+        format!("[{}] {}", project.code, project.name)
+    }
 }

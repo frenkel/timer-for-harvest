@@ -14,6 +14,7 @@ pub struct Harvest {
 pub struct Project {
     pub id: u32,
     pub name: String,
+    pub code: String,
     pub client: Option<Client>,
 }
 
