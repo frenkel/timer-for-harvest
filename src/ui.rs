@@ -192,16 +192,23 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
                     &task_store_clone,
                     project_from_index(&project_store_clone, index),
                 );
-                /* TODO handle failure */
-                task_chooser_clone
-                    .set_active_iter(Some(&iter_from_id(&task_store_clone, timer_clone.task_id).unwrap()));
+                if timer_clone.task_id > 0 {
+                    /* TODO handle failure */
+                    task_chooser_clone.set_active_iter(
+                        Some(&iter_from_id(&task_store_clone, timer_clone.task_id).unwrap())
+                    );
+                }
             }
             None => {}
         }
     });
     let timer_clone2 = Rc::clone(&rc);
-    /* TODO handle failure */
-    project_chooser.set_active_iter(Some(&iter_from_id(&project_store, timer_clone2.project_id).unwrap()));
+    if timer_clone2.project_id > 0 {
+        /* TODO handle failure */
+        project_chooser.set_active_iter(
+            Some(&iter_from_id(&project_store, timer_clone2.project_id).unwrap())
+        );
+    }
 
     let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
     let notes_input = gtk::Entry::new();
