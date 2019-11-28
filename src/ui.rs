@@ -81,6 +81,11 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
             window_clone2.get_application().unwrap().add_window(&popup);
             popup.set_transient_for(Some(&window_clone2));
             popup.show_all();
+            let window_clone3 = window_clone2.clone();
+            popup.connect_delete_event(move |_, _| {
+                load_time_entries(&window_clone3.clone());
+                Inhibit(false)
+            });
         });
         row.pack_start(&edit_button, false, false, 0);
         rows.pack_end(&row, true, false, 0);
