@@ -65,12 +65,16 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
         let edit_button = gtk::Button::new_with_label("Edit");
         let window_clone2 = window.clone();
         edit_button.connect_clicked(move |_| {
+            let notes = match rc.notes.as_ref() {
+                Some(n) => Some(n.to_string()),
+                None => None
+            };
             let popup = build_popup(harvest::Timer {
                 id: Some(rc.id),
                 project_id: rc.project.id,
                 task_id: rc.task.id,
                 spent_date: Some(rc.spent_date.clone()),
-                notes: Some(rc.notes.as_ref().unwrap().to_string()),
+                notes: notes,
                 hours: Some(rc.hours),
                 is_running: rc.is_running,
             });
