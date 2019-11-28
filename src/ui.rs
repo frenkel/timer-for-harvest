@@ -33,7 +33,12 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
         );
         data.pack_start(&left_aligned_label(&time_entry.task.name), true, false, 0);
         row.pack_start(&data, true, true, 0);
-        row.pack_start(&left_aligned_label(&f32_to_duration_str(time_entry.hours)), false, false, 0);
+        row.pack_start(
+            &left_aligned_label(&harvest::f32_to_duration_str(time_entry.hours)),
+            false,
+            false,
+            0,
+        );
         let button = gtk::Button::new();
         let window_clone = window.clone();
         let rc = Rc::new(time_entry);
@@ -67,7 +72,7 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
                 spent_date: Some(rc.spent_date.clone()),
                 notes: Some(rc.notes.as_ref().unwrap().to_string()),
                 hours: Some(rc.hours),
-                is_running: rc.is_running
+                is_running: rc.is_running,
             });
             window_clone2.get_application().unwrap().add_window(&popup);
             popup.set_transient_for(Some(&window_clone2));
@@ -115,7 +120,8 @@ fn build_ui(application: &gtk::Application) {
 
     window.add_events(gdk::EventMask::KEY_PRESS_MASK);
     window.connect_key_press_event(|window, event| {
-        if event.get_keyval() == 65474 { /* F5 key pressed */
+        if event.get_keyval() == 65474 {
+            /* F5 key pressed */
             load_time_entries(&window);
             Inhibit(true)
         } else {
@@ -134,7 +140,7 @@ fn build_ui(application: &gtk::Application) {
             spent_date: None,
             notes: None,
             hours: None,
-            is_running: false
+            is_running: false,
         });
         application_clone.add_window(&popup);
         popup.set_transient_for(Some(&window_clone));
@@ -165,7 +171,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
         gtk::Type::String,
         gtk::Type::U32,
         gtk::Type::String,
-        gtk::Type::String
+        gtk::Type::String,
     ]);
     let api = Harvest::new();
     let user = api.current_user();
@@ -211,9 +217,9 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
                 );
                 if timer_clone.task_id > 0 {
                     /* TODO handle failure */
-                    task_chooser_clone.set_active_iter(
-                        Some(&iter_from_id(&task_store_clone, timer_clone.task_id).unwrap())
-                    );
+                    task_chooser_clone.set_active_iter(Some(
+                        &iter_from_id(&task_store_clone, timer_clone.task_id).unwrap(),
+                    ));
                 }
             }
             None => {}
@@ -222,9 +228,9 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     let timer_clone2 = Rc::clone(&rc);
     if timer_clone2.project_id > 0 {
         /* TODO handle failure */
-        project_chooser.set_active_iter(
-            Some(&iter_from_id(&project_store, timer_clone2.project_id).unwrap())
-        );
+        project_chooser.set_active_iter(Some(
+            &iter_from_id(&project_store, timer_clone2.project_id).unwrap(),
+        ));
     }
 
     let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
@@ -238,7 +244,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     let hour_input = gtk::Entry::new();
     inputs.pack_start(&hour_input, false, false, 0);
     match timer_clone2.hours {
-        Some(h) => hour_input.set_text(&f32_to_duration_str(h)),
+        Some(h) => hour_input.set_text(&harvest::f32_to_duration_str(h)),
         None => {}
     }
     hour_input.set_editable(!timer_clone2.is_running);
@@ -268,7 +274,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
                             &project,
                             &task,
                             &notes_input.get_text().unwrap(),
-                            duration_str_to_f32(&hour_input.get_text().unwrap()),
+                            harvest::duration_str_to_f32(&hour_input.get_text().unwrap()),
                         );
                         popup_clone.close();
                     }
@@ -293,9 +299,11 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
                             project_id: project.id,
                             task_id: task.id,
                             notes: Some(notes_input.get_text().unwrap().to_string()),
-                            hours: Some(duration_str_to_f32(&hour_input.get_text().unwrap())),
+                            hours: Some(harvest::duration_str_to_f32(
+                                &hour_input.get_text().unwrap(),
+                            )),
                             is_running: timer_clone2.is_running,
-                            spent_date: Some(timer_clone2.spent_date.as_ref().unwrap().to_string())
+                            spent_date: Some(timer_clone2.spent_date.as_ref().unwrap().to_string()),
                         });
                         popup_clone.close();
                     }
@@ -319,7 +327,7 @@ fn project_from_index(store: &gtk::ListStore, index: u32) -> harvest::Project {
         id: id,
         client: None,
         name: name,
-        code: code
+        code: code,
     }
 }
 
@@ -353,28 +361,6 @@ fn load_tasks(store: &gtk::ListStore, project: harvest::Project) {
             &[&task_assignment.task.name, &task_assignment.task.id],
         );
     }
-}
-
-/* TODO move to TimeEntry */
-fn duration_str_to_f32(duration: &str) -> f32 {
-    if duration.len() > 0 {
-        let mut parts = duration.split(":");
-        /* TODO handle errors */
-        let hours: f32 = parts.next().unwrap().parse().unwrap();
-        /* TODO handle errors */
-        let minutes: f32 = parts.next().unwrap().parse().unwrap();
-        hours + minutes / 60.0
-    } else {
-        0.0
-    }
-}
-
-/* TODO move to TimeEntry */
-fn f32_to_duration_str(duration: f32) -> String {
-    let minutes = duration % 1.0;
-    let hours = duration - minutes;
-
-    format!("{:.0}:{:0<2.0}", hours, minutes * 60.0)
 }
 
 fn name_and_code(project: &harvest::Project) -> String {

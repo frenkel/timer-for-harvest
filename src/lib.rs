@@ -65,7 +65,7 @@ pub struct Timer {
     pub spent_date: Option<String>,
     pub notes: Option<String>,
     pub hours: Option<f32>,
-    pub is_running: bool
+    pub is_running: bool,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -192,7 +192,7 @@ impl Harvest {
             spent_date: Some(now.to_string()),
             notes: None,
             hours: None,
-            is_running: true
+            is_running: true,
         };
         if notes.len() > 0 {
             timer.notes = Some(notes.to_string());
@@ -284,4 +284,26 @@ impl Harvest {
             .send()
             .unwrap()
     }
+}
+
+/* TODO move to TimeEntry */
+pub fn duration_str_to_f32(duration: &str) -> f32 {
+    if duration.len() > 0 {
+        let mut parts = duration.split(":");
+        /* TODO handle errors */
+        let hours: f32 = parts.next().unwrap().parse().unwrap();
+        /* TODO handle errors */
+        let minutes: f32 = parts.next().unwrap().parse().unwrap();
+        hours + minutes / 60.0
+    } else {
+        0.0
+    }
+}
+
+/* TODO move to TimeEntry */
+pub fn f32_to_duration_str(duration: f32) -> String {
+    let minutes = duration % 1.0;
+    let hours = duration - minutes;
+
+    format!("{:.0}:{:0>2.0}", hours, minutes * 60.0)
 }
