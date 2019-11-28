@@ -302,7 +302,6 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
                         /* TODO remove api init here */
                         let api = Harvest::new();
                         let task = task_from_index(&task_store_clone2, task_index);
-                        println!("{}", timer_clone2.id.unwrap());
                         api.update_timer(&harvest::Timer {
                             id: timer_clone2.id,
                             project_id: project.id,
