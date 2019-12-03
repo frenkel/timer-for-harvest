@@ -8,6 +8,7 @@ use std::rc::Rc;
 pub struct Ui {
     main_window: gtk::ApplicationWindow,
     api: Harvest,
+    start_button: gtk::Button,
 }
 
 fn left_aligned_label(text: &str) -> gtk::Label {
@@ -21,9 +22,9 @@ pub fn main_window() {
         gtk::Application::new(Some("nl.frankgroeneveld.harvest"), Default::default()).unwrap();
 
     application.connect_activate(|app| {
-        let ui = Ui::new(app);
-        Ui::load_time_entries(&ui.main_window);
-
+        let ui = Rc::new(Ui::new(app));
+        Ui::load_time_entries(&ui);
+        Ui::connect_main_window_events(&ui);
     });
 
     application.run(&args().collect::<Vec<_>>());
@@ -44,20 +45,27 @@ impl Ui {
         window.set_default_size(350, 70);
 
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
-        window.connect_key_press_event(|window, event| {
+
+        let button = gtk::Button::new_with_label("Start");
+        container.pack_start(&button);
+
+        Ui { main_window: window, api: Harvest::new(), start_button: button }
+    }
+
+    pub fn connect_main_window_events(ui: &Rc<Ui>) {
+        let key_press_event_ui_ref = Rc::clone(&ui);
+        ui.main_window.connect_key_press_event(move |_window, event| {
             if event.get_keyval() == 65474 {
                 /* F5 key pressed */
-                Ui::load_time_entries(&window);
+                Ui::load_time_entries(&key_press_event_ui_ref);
                 Inhibit(true)
             } else {
                 Inhibit(false)
             }
         });
 
-        let button = gtk::Button::new_with_label("Start");
-        let application_clone = application.clone();
-        let window_clone = window.clone();
-        button.connect_clicked(move |_| {
+        let button_ui_ref = Rc::clone(&ui);
+        ui.start_button.connect_clicked(move |_| {
             let popup = build_popup(harvest::Timer {
                 id: None,
                 project_id: 0,
@@ -67,26 +75,20 @@ impl Ui {
                 hours: None,
                 is_running: false,
             });
-            application_clone.add_window(&popup);
-            popup.set_transient_for(Some(&window_clone));
+            button_ui_ref.main_window.get_application().unwrap().add_window(&popup);
+            popup.set_transient_for(Some(&button_ui_ref.main_window));
             popup.show_all();
-            let window_clone2 = window_clone.clone();
+            let delete_event_ref = Rc::clone(&button_ui_ref);
             popup.connect_delete_event(move |_, _| {
-                Ui::load_time_entries(&window_clone2.clone());
+                Ui::load_time_entries(&delete_event_ref);
                 Inhibit(false)
             });
         });
-
-        container.pack_start(&button);
-
-        Ui { main_window: window, api: Harvest::new() }
     }
 
-    fn load_time_entries(window: &gtk::ApplicationWindow) {
-        /* TODO remove api init here */
-        let api = Harvest::new();
-        let user = api.current_user();
-        let time_entries = api.time_entries_today(user);
+    fn load_time_entries(ui: &Rc<Ui>) {
+        let user = ui.api.current_user();
+        let time_entries = ui.api.time_entries_today(user);
         let rows = gtk::Box::new(
             gtk::Orientation::Vertical,
             time_entries.len().try_into().unwrap(),
@@ -122,30 +124,27 @@ impl Ui {
                 10,
             );
             let button = gtk::Button::new();
-            let window_clone = window.clone();
             let rc = Rc::new(time_entry);
             let time_entry_clone = Rc::clone(&rc);
+            let button_ui_ref = Rc::clone(&ui);
             if time_entry_clone.is_running {
                 button.set_label("Stop");
                 button.connect_clicked(move |_| {
-                    /* TODO remove api init here */
-                    let api = Harvest::new();
-                    api.stop_timer(&time_entry_clone);
-                    Ui::load_time_entries(&window_clone.clone());
+                    button_ui_ref.api.stop_timer(&time_entry_clone);
+                    Ui::load_time_entries(&button_ui_ref);
                 });
             } else {
                 button.set_label("Start");
                 button.connect_clicked(move |_| {
-                    /* TODO remove api init here */
-                    let api = Harvest::new();
-                    api.restart_timer(&time_entry_clone);
-                    Ui::load_time_entries(&window_clone.clone());
+                    button_ui_ref.api.restart_timer(&time_entry_clone);
+                    Ui::load_time_entries(&button_ui_ref);
                 });
             };
 
             row.pack_start(&button, false, false, 0);
             let edit_button = gtk::Button::new_with_label("Edit");
-            let window_clone2 = window.clone();
+            let window_clone2 = ui.main_window.clone();
+            let edit_button_ui_ref = Rc::clone(&ui);
             edit_button.connect_clicked(move |_| {
                 let notes = match rc.notes.as_ref() {
                     Some(n) => Some(n.to_string()),
@@ -163,9 +162,9 @@ impl Ui {
                 window_clone2.get_application().unwrap().add_window(&popup);
                 popup.set_transient_for(Some(&window_clone2));
                 popup.show_all();
-                let window_clone3 = window_clone2.clone();
+                let delete_event_ui_ref = Rc::clone(&edit_button_ui_ref);
                 popup.connect_delete_event(move |_, _| {
-                    Ui::load_time_entries(&window_clone3.clone());
+                    Ui::load_time_entries(&delete_event_ui_ref);
                     Inhibit(false)
                 });
             });
@@ -173,16 +172,16 @@ impl Ui {
             rows.pack_end(&row, true, false, 5);
         }
 
-        match window.get_children().first() {
+        match ui.main_window.get_children().first() {
             Some(child) => {
                 if child.is::<gtk::Box>() {
-                    window.remove(child);
+                    ui.main_window.remove(child);
                 }
             }
             None => {}
         }
-        window.add(&rows);
-        window.show_all();
+        ui.main_window.add(&rows);
+        ui.main_window.show_all();
     }
 }
 
