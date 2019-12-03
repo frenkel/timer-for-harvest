@@ -68,6 +68,17 @@ pub struct Timer {
     pub is_running: bool,
 }
 
+/* a partially filled TimeEntry with id's instead of objects (Project etc) */
+#[derive(serde::Serialize, serde::Deserialize)]
+pub struct TimerWithoutHours {
+    pub id: Option<u32>,
+    pub project_id: u32,
+    pub task_id: u32,
+    pub spent_date: Option<String>,
+    pub notes: Option<String>,
+    pub is_running: bool,
+}
+
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct ProjectPage {
     pub projects: Vec<Project>,
@@ -234,9 +245,25 @@ impl Harvest {
             timer.id.unwrap()
         );
 
-        let mut res = self.api_patch_request(&url, &timer);
-        let body = &res.text().unwrap();
-        serde_json::from_str(body).unwrap()
+        /* TODO how not to sent hours when is_running in a better way? */
+        if timer.is_running {
+            let t2 = TimerWithoutHours {
+                id: timer.id,
+                project_id: timer.project_id,
+                task_id: timer.task_id,
+                notes: Some(timer.notes.as_ref().unwrap().to_string()),
+                is_running: true,
+                spent_date: Some(timer.spent_date.as_ref().unwrap().to_string()),
+            };
+
+            let mut res = self.api_patch_request(&url, &t2);
+            let body = &res.text().unwrap();
+            serde_json::from_str(body).unwrap()
+        } else {
+            let mut res = self.api_patch_request(&url, &timer);
+            let body = &res.text().unwrap();
+            serde_json::from_str(body).unwrap()
+        }
     }
 
     fn api_get_request(&self, url: &str) -> reqwest::Response {
