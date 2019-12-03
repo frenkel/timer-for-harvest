@@ -196,7 +196,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     let api = Harvest::new();
     let user = api.current_user();
     let mut projects = api.active_projects(user);
-    projects.sort_by(|a, b| a.name.cmp(&b.name));
+    projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
     for project in &projects {
         project_store.set(
             &project_store.append(),
