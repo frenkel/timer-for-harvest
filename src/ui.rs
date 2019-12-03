@@ -5,113 +5,15 @@ use std::convert::TryInto;
 use std::env::args;
 use std::rc::Rc;
 
+pub struct Ui {
+    main_window: gtk::ApplicationWindow,
+    api: Harvest,
+}
+
 fn left_aligned_label(text: &str) -> gtk::Label {
     let label = gtk::Label::new(Some(text));
     label.set_xalign(0.0);
     label
-}
-
-fn load_time_entries(window: &gtk::ApplicationWindow) {
-    /* TODO remove api init here */
-    let api = Harvest::new();
-    let user = api.current_user();
-    let time_entries = api.time_entries_today(user);
-    let rows = gtk::Box::new(
-        gtk::Orientation::Vertical,
-        time_entries.len().try_into().unwrap(),
-    );
-
-    for time_entry in time_entries {
-        let row = gtk::Box::new(gtk::Orientation::Horizontal, 2);
-        let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
-        let project_client = format!(
-            "<b>{}</b> ({})",
-            &name_and_code(&time_entry.project),
-            &time_entry.client.name
-        );
-        let project_label = left_aligned_label(&project_client);
-        project_label.set_use_markup(true);
-        data.pack_start(&project_label, true, false, 0);
-        let task_notes = format!(
-            "{} - {}",
-            &time_entry.task.name,
-            &time_entry.notes.as_ref().unwrap().to_string()
-        );
-        data.pack_start(
-            &left_aligned_label(&task_notes),
-            true,
-            false,
-            0,
-        );
-        row.pack_start(&data, true, true, 0);
-        row.pack_start(
-            &left_aligned_label(&harvest::f32_to_duration_str(time_entry.hours)),
-            false,
-            false,
-            10,
-        );
-        let button = gtk::Button::new();
-        let window_clone = window.clone();
-        let rc = Rc::new(time_entry);
-        let time_entry_clone = Rc::clone(&rc);
-        if time_entry_clone.is_running {
-            button.set_label("Stop");
-            button.connect_clicked(move |_| {
-                /* TODO remove api init here */
-                let api = Harvest::new();
-                api.stop_timer(&time_entry_clone);
-                load_time_entries(&window_clone.clone());
-            });
-        } else {
-            button.set_label("Start");
-            button.connect_clicked(move |_| {
-                /* TODO remove api init here */
-                let api = Harvest::new();
-                api.restart_timer(&time_entry_clone);
-                load_time_entries(&window_clone.clone());
-            });
-        };
-
-        row.pack_start(&button, false, false, 0);
-        let edit_button = gtk::Button::new_with_label("Edit");
-        let window_clone2 = window.clone();
-        edit_button.connect_clicked(move |_| {
-            let notes = match rc.notes.as_ref() {
-                Some(n) => Some(n.to_string()),
-                None => None,
-            };
-            let popup = build_popup(harvest::Timer {
-                id: Some(rc.id),
-                project_id: rc.project.id,
-                task_id: rc.task.id,
-                spent_date: Some(rc.spent_date.clone()),
-                notes: notes,
-                hours: Some(rc.hours),
-                is_running: rc.is_running,
-            });
-            window_clone2.get_application().unwrap().add_window(&popup);
-            popup.set_transient_for(Some(&window_clone2));
-            popup.show_all();
-            let window_clone3 = window_clone2.clone();
-            popup.connect_delete_event(move |_, _| {
-                load_time_entries(&window_clone3.clone());
-                Inhibit(false)
-            });
-        });
-        row.pack_start(&edit_button, false, false, 0);
-        rows.pack_end(&row, true, false, 5);
-    }
-
-    match window.get_children().first() {
-        Some(child) => {
-            if child.is::<gtk::Box>() {
-                window.remove(child);
-            }
-        }
-        None => {}
-    }
-    window.add(&rows);
-    window.show_all();
 }
 
 pub fn main_window() {
@@ -119,62 +21,169 @@ pub fn main_window() {
         gtk::Application::new(Some("nl.frankgroeneveld.harvest"), Default::default()).unwrap();
 
     application.connect_activate(|app| {
-        build_ui(app);
+        let ui = Ui::new(app);
+        Ui::load_time_entries(&ui.main_window);
+
     });
 
     application.run(&args().collect::<Vec<_>>());
 }
 
-fn build_ui(application: &gtk::Application) {
-    let window = gtk::ApplicationWindow::new(application);
-    let container = gtk::HeaderBar::new();
+impl Ui {
+    pub fn new(application: &gtk::Application) -> Ui {
+        let window = gtk::ApplicationWindow::new(application);
+        let container = gtk::HeaderBar::new();
 
-    container.set_title(Some("Harvest"));
-    container.set_show_close_button(true);
+        container.set_title(Some("Harvest"));
+        container.set_show_close_button(true);
 
-    window.set_title("Harvest");
-    window.set_titlebar(Some(&container));
-    window.set_border_width(10);
-    window.set_position(gtk::WindowPosition::Center);
-    window.set_default_size(350, 70);
+        window.set_title("Harvest");
+        window.set_titlebar(Some(&container));
+        window.set_border_width(10);
+        window.set_position(gtk::WindowPosition::Center);
+        window.set_default_size(350, 70);
 
-    window.add_events(gdk::EventMask::KEY_PRESS_MASK);
-    window.connect_key_press_event(|window, event| {
-        if event.get_keyval() == 65474 {
-            /* F5 key pressed */
-            load_time_entries(&window);
-            Inhibit(true)
-        } else {
-            Inhibit(false)
+        window.add_events(gdk::EventMask::KEY_PRESS_MASK);
+        window.connect_key_press_event(|window, event| {
+            if event.get_keyval() == 65474 {
+                /* F5 key pressed */
+                Ui::load_time_entries(&window);
+                Inhibit(true)
+            } else {
+                Inhibit(false)
+            }
+        });
+
+        let button = gtk::Button::new_with_label("Start");
+        let application_clone = application.clone();
+        let window_clone = window.clone();
+        button.connect_clicked(move |_| {
+            let popup = build_popup(harvest::Timer {
+                id: None,
+                project_id: 0,
+                task_id: 0,
+                spent_date: None,
+                notes: None,
+                hours: None,
+                is_running: false,
+            });
+            application_clone.add_window(&popup);
+            popup.set_transient_for(Some(&window_clone));
+            popup.show_all();
+            let window_clone2 = window_clone.clone();
+            popup.connect_delete_event(move |_, _| {
+                Ui::load_time_entries(&window_clone2.clone());
+                Inhibit(false)
+            });
+        });
+
+        container.pack_start(&button);
+
+        Ui { main_window: window, api: Harvest::new() }
+    }
+
+    fn load_time_entries(window: &gtk::ApplicationWindow) {
+        /* TODO remove api init here */
+        let api = Harvest::new();
+        let user = api.current_user();
+        let time_entries = api.time_entries_today(user);
+        let rows = gtk::Box::new(
+            gtk::Orientation::Vertical,
+            time_entries.len().try_into().unwrap(),
+        );
+
+        for time_entry in time_entries {
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+            let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
+            let project_client = format!(
+                "<b>{}</b> ({})",
+                &name_and_code(&time_entry.project),
+                &time_entry.client.name
+            );
+            let project_label = left_aligned_label(&project_client);
+            project_label.set_use_markup(true);
+            data.pack_start(&project_label, true, false, 0);
+            let task_notes = format!(
+                "{} - {}",
+                &time_entry.task.name,
+                &time_entry.notes.as_ref().unwrap().to_string()
+            );
+            data.pack_start(
+                &left_aligned_label(&task_notes),
+                true,
+                false,
+                0,
+            );
+            row.pack_start(&data, true, true, 0);
+            row.pack_start(
+                &left_aligned_label(&harvest::f32_to_duration_str(time_entry.hours)),
+                false,
+                false,
+                10,
+            );
+            let button = gtk::Button::new();
+            let window_clone = window.clone();
+            let rc = Rc::new(time_entry);
+            let time_entry_clone = Rc::clone(&rc);
+            if time_entry_clone.is_running {
+                button.set_label("Stop");
+                button.connect_clicked(move |_| {
+                    /* TODO remove api init here */
+                    let api = Harvest::new();
+                    api.stop_timer(&time_entry_clone);
+                    Ui::load_time_entries(&window_clone.clone());
+                });
+            } else {
+                button.set_label("Start");
+                button.connect_clicked(move |_| {
+                    /* TODO remove api init here */
+                    let api = Harvest::new();
+                    api.restart_timer(&time_entry_clone);
+                    Ui::load_time_entries(&window_clone.clone());
+                });
+            };
+
+            row.pack_start(&button, false, false, 0);
+            let edit_button = gtk::Button::new_with_label("Edit");
+            let window_clone2 = window.clone();
+            edit_button.connect_clicked(move |_| {
+                let notes = match rc.notes.as_ref() {
+                    Some(n) => Some(n.to_string()),
+                    None => None,
+                };
+                let popup = build_popup(harvest::Timer {
+                    id: Some(rc.id),
+                    project_id: rc.project.id,
+                    task_id: rc.task.id,
+                    spent_date: Some(rc.spent_date.clone()),
+                    notes: notes,
+                    hours: Some(rc.hours),
+                    is_running: rc.is_running,
+                });
+                window_clone2.get_application().unwrap().add_window(&popup);
+                popup.set_transient_for(Some(&window_clone2));
+                popup.show_all();
+                let window_clone3 = window_clone2.clone();
+                popup.connect_delete_event(move |_, _| {
+                    Ui::load_time_entries(&window_clone3.clone());
+                    Inhibit(false)
+                });
+            });
+            row.pack_start(&edit_button, false, false, 0);
+            rows.pack_end(&row, true, false, 5);
         }
-    });
 
-    let button = gtk::Button::new_with_label("Start");
-    let application_clone = application.clone();
-    let window_clone = window.clone();
-    button.connect_clicked(move |_| {
-        let popup = build_popup(harvest::Timer {
-            id: None,
-            project_id: 0,
-            task_id: 0,
-            spent_date: None,
-            notes: None,
-            hours: None,
-            is_running: false,
-        });
-        application_clone.add_window(&popup);
-        popup.set_transient_for(Some(&window_clone));
-        popup.show_all();
-        let window_clone2 = window_clone.clone();
-        popup.connect_delete_event(move |_, _| {
-            load_time_entries(&window_clone2.clone());
-            Inhibit(false)
-        });
-    });
-
-    container.pack_start(&button);
-
-    load_time_entries(&window.clone());
+        match window.get_children().first() {
+            Some(child) => {
+                if child.is::<gtk::Box>() {
+                    window.remove(child);
+                }
+            }
+            None => {}
+        }
+        window.add(&rows);
+        window.show_all();
+    }
 }
 
 fn build_popup(timer: harvest::Timer) -> gtk::Window {
