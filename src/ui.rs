@@ -241,10 +241,8 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
                     project_from_index(&project_store_clone, index),
                 );
                 if timer_clone.task_id > 0 {
-                    /* TODO handle failure */
-                    task_chooser_clone.set_active_iter(Some(
-                        &iter_from_id(&task_store_clone, timer_clone.task_id).unwrap(),
-                    ));
+                    /* when project_id changes, we might not have a task in the dropdown */
+                    task_chooser_clone.set_active_iter(iter_from_id(&task_store_clone, timer_clone.task_id).as_ref());
                 }
             }
             None => {}
