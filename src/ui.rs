@@ -24,20 +24,31 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
     for time_entry in time_entries {
         let row = gtk::Box::new(gtk::Orientation::Horizontal, 2);
         let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
-        data.pack_start(&left_aligned_label(&time_entry.client.name), true, false, 0);
+        let project_client = format!(
+            "<b>{}</b> ({})",
+            &name_and_code(&time_entry.project),
+            &time_entry.client.name
+        );
+        let project_label = left_aligned_label(&project_client);
+        project_label.set_use_markup(true);
+        data.pack_start(&project_label, true, false, 0);
+        let task_notes = format!(
+            "{} - {}",
+            &time_entry.task.name,
+            &time_entry.notes.as_ref().unwrap().to_string()
+        );
         data.pack_start(
-            &left_aligned_label(&name_and_code(&time_entry.project)),
+            &left_aligned_label(&task_notes),
             true,
             false,
             0,
         );
-        data.pack_start(&left_aligned_label(&time_entry.task.name), true, false, 0);
         row.pack_start(&data, true, true, 0);
         row.pack_start(
             &left_aligned_label(&harvest::f32_to_duration_str(time_entry.hours)),
             false,
             false,
-            0,
+            10,
         );
         let button = gtk::Button::new();
         let window_clone = window.clone();
@@ -67,7 +78,7 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
         edit_button.connect_clicked(move |_| {
             let notes = match rc.notes.as_ref() {
                 Some(n) => Some(n.to_string()),
-                None => None
+                None => None,
             };
             let popup = build_popup(harvest::Timer {
                 id: Some(rc.id),
@@ -88,7 +99,7 @@ fn load_time_entries(window: &gtk::ApplicationWindow) {
             });
         });
         row.pack_start(&edit_button, false, false, 0);
-        rows.pack_end(&row, true, false, 0);
+        rows.pack_end(&row, true, false, 5);
     }
 
     match window.get_children().first() {
@@ -190,7 +201,12 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
         project_store.set(
             &project_store.append(),
             &[0, 1, 2, 3],
-            &[&name_and_code(&project), &project.id, &project.code, &project.name],
+            &[
+                &name_and_code(&project),
+                &project.id,
+                &project.code,
+                &project.name,
+            ],
         );
     }
 
