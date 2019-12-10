@@ -307,10 +307,24 @@ impl Harvest {
 pub fn duration_str_to_f32(duration: &str) -> f32 {
     if duration.len() > 0 {
         let mut parts = duration.split(":");
-        /* TODO handle errors */
-        let hours: f32 = parts.next().unwrap().parse().unwrap();
-        /* TODO handle errors */
-        let minutes: f32 = parts.next().unwrap().parse().unwrap();
+        let hours: f32 = match parts.next() {
+            None => { 0.0 }
+            Some(h) => {
+                match h.parse() {
+                    Ok(p) => { p }
+                    Err(_) => { 0.0 }
+                }
+            }
+        };
+        let minutes: f32 = match parts.next() {
+            None => { 0.0 }
+            Some(m) => {
+                match m.parse() {
+                    Ok(p) => { p }
+                    Err(_) => { 0.0 }
+                }
+            }
+        };
         hours + minutes / 60.0
     } else {
         0.0
