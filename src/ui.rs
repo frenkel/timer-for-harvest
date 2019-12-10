@@ -133,6 +133,7 @@ impl Ui {
                     button_ui_ref.api.stop_timer(&time_entry_clone);
                     Ui::load_time_entries(&button_ui_ref);
                 });
+                button.get_style_context().add_class("suggested-action");
             } else {
                 button.set_label("Start");
                 button.connect_clicked(move |_| {
