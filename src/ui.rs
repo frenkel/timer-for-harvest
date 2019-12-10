@@ -267,6 +267,8 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
 
     let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
     let notes_input = gtk::Entry::new();
+    notes_input.set_property("activates-default", &true)
+            .expect("could not allow default activation");
     inputs.pack_start(&notes_input, true, true, 0);
     match &timer_clone2.notes {
         Some(n) => notes_input.set_text(&n),
@@ -274,6 +276,8 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     }
 
     let hour_input = gtk::Entry::new();
+    hour_input.set_property("activates-default", &true)
+            .expect("could not allow default activation");
     inputs.pack_start(&hour_input, false, false, 0);
     match timer_clone2.hours {
         Some(h) => hour_input.set_text(&harvest::f32_to_duration_str(h)),
@@ -284,6 +288,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     data.pack_start(&inputs, true, false, 0);
 
     let start_button = gtk::Button::new();
+    start_button.set_can_default(true);
     data.pack_start(&start_button, false, false, 0);
 
     let project_chooser_clone2 = project_chooser.clone();
@@ -346,6 +351,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     }
 
     popup.add(&data);
+    start_button.grab_default();
     popup
 }
 
