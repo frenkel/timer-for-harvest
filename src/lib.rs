@@ -22,6 +22,7 @@ pub struct Project {
 pub struct ProjectAssignment {
     pub id: u32,
     pub project: Project,
+    pub task_assignments: Vec<TaskAssignment>,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -39,7 +40,6 @@ pub struct Task {
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct TaskAssignment {
     pub id: u32,
-    pub project: Project,
     pub task: Task,
 }
 
@@ -130,21 +130,23 @@ impl Harvest {
         serde_json::from_str(&content).unwrap()
     }
 
-    pub fn active_projects(&self, user: User) -> Vec<Project> {
-        let mut projects: Vec<Project> = vec![];
+    pub fn active_project_assignments(&self) -> Vec<ProjectAssignment> {
+        let mut project_assignments: Vec<ProjectAssignment> = vec![];
         let mut current_page = 1;
 
         loop {
             let url = format!(
-                "https://api.harvestapp.com/v2/users/{}/project_assignments?page={}",
-                user.id, current_page
+                "https://api.harvestapp.com/v2/users/me/project_assignments?page={}",
+                current_page
             );
             let mut res = self.api_get_request(&url);
             let body = &res.text().unwrap();
             let page: ProjectAssignmentPage = serde_json::from_str(body).unwrap();
+
             for project_assignment in page.project_assignments {
-                projects.push(project_assignment.project);
+                project_assignments.push(project_assignment);
             }
+
             if current_page == page.total_pages {
                 break;
             } else {
@@ -152,7 +154,7 @@ impl Harvest {
             }
         }
 
-        projects
+        project_assignments
     }
 
     pub fn time_entries_today(&self, user: User) -> Vec<TimeEntry> {
@@ -173,18 +175,6 @@ impl Harvest {
         let mut res = self.api_get_request(&url);
         let body = &res.text().unwrap();
         serde_json::from_str(body).unwrap()
-    }
-
-    pub fn project_task_assignments(&self, project: &Project) -> Vec<TaskAssignment> {
-        let url = format!(
-            "https://api.harvestapp.com/v2/projects/{}/task_assignments?is_active=true",
-            project.id
-        );
-        let mut res = self.api_get_request(&url);
-        let body = &res.text().unwrap();
-        let page: TaskAssignmentPage = serde_json::from_str(body).unwrap();
-
-        page.task_assignments
     }
 
     pub fn start_timer(

@@ -49,20 +49,25 @@ impl Ui {
         let button = gtk::Button::new_with_label("Start");
         container.pack_start(&button);
 
-        Ui { main_window: window, api: Harvest::new(), start_button: button }
+        Ui {
+            main_window: window,
+            api: Harvest::new(),
+            start_button: button,
+        }
     }
 
     pub fn connect_main_window_events(ui: &Rc<Ui>) {
         let key_press_event_ui_ref = Rc::clone(&ui);
-        ui.main_window.connect_key_press_event(move |_window, event| {
-            if event.get_keyval() == 65474 {
-                /* F5 key pressed */
-                Ui::load_time_entries(&key_press_event_ui_ref);
-                Inhibit(true)
-            } else {
-                Inhibit(false)
-            }
-        });
+        ui.main_window
+            .connect_key_press_event(move |_window, event| {
+                if event.get_keyval() == 65474 {
+                    /* F5 key pressed */
+                    Ui::load_time_entries(&key_press_event_ui_ref);
+                    Inhibit(true)
+                } else {
+                    Inhibit(false)
+                }
+            });
 
         let button_ui_ref = Rc::clone(&ui);
         ui.start_button.connect_clicked(move |_| {
@@ -75,7 +80,11 @@ impl Ui {
                 hours: None,
                 is_running: false,
             });
-            button_ui_ref.main_window.get_application().unwrap().add_window(&popup);
+            button_ui_ref
+                .main_window
+                .get_application()
+                .unwrap()
+                .add_window(&popup);
             popup.set_transient_for(Some(&button_ui_ref.main_window));
             popup.show_all();
             let delete_event_ref = Rc::clone(&button_ui_ref);
@@ -109,19 +118,10 @@ impl Ui {
                 Some(n) => n.to_string(),
                 None => "".to_string(),
             };
-            let task_notes = format!(
-                "{} - {}",
-                &time_entry.task.name,
-                &notes,
-            );
+            let task_notes = format!("{} - {}", &time_entry.task.name, &notes);
             let notes_label = left_aligned_label(&task_notes);
             notes_label.set_line_wrap(true);
-            data.pack_start(
-                &notes_label,
-                true,
-                false,
-                0,
-            );
+            data.pack_start(&notes_label, true, false, 0);
             row.pack_start(&data, true, true, 0);
             row.pack_start(
                 &left_aligned_label(&harvest::f32_to_duration_str(time_entry.hours)),
@@ -202,28 +202,26 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
 
     popup.connect_delete_event(|_, _| Inhibit(false));
 
-    let project_store = gtk::ListStore::new(&[
-        gtk::Type::String,
-        gtk::Type::U32,
-        gtk::Type::String,
-        gtk::Type::String,
-    ]);
+    let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
     let api = Harvest::new();
-    let user = api.current_user();
-    let mut projects = api.active_projects(user);
-    projects.sort_by(|a, b| a.name.to_lowercase().cmp(&b.name.to_lowercase()));
-    for project in &projects {
+    let mut project_assignments = api.active_project_assignments();
+    project_assignments.sort_by(|a, b| {
+        a.project
+            .name
+            .to_lowercase()
+            .cmp(&b.project.name.to_lowercase())
+    });
+    for project_assignment in &project_assignments {
         project_store.set(
             &project_store.append(),
-            &[0, 1, 2, 3],
+            &[0, 1],
             &[
-                &name_and_code(&project),
-                &project.id,
-                &project.code,
-                &project.name,
+                &name_and_code(&project_assignment.project),
+                &project_assignment.project.id,
             ],
         );
     }
+    let project_assignments = Rc::new(project_assignments);
 
     let data = gtk::Box::new(gtk::Orientation::Vertical, 5);
 
@@ -247,18 +245,28 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     let project_chooser_clone = project_chooser.clone();
     let project_store_clone = project_store.clone();
     let task_chooser_clone = task_chooser.clone();
+    let project_assignments_ref = Rc::clone(&project_assignments);
     project_chooser.connect_changed(move |_| {
         task_store_clone.clear();
         match project_chooser_clone.get_active() {
             Some(index) => {
-                load_tasks(
-                    &task_store_clone,
-                    project_from_index(&project_store_clone, index),
+                let project_assignment = project_assignment_from_index(
+                    &project_store_clone,
+                    index,
+                    &project_assignments_ref,
                 );
-                if timer_clone.task_id > 0 {
-                    /* when project_id changes, we might not have a task in the dropdown */
-                    task_chooser_clone.set_active_iter(iter_from_id(&task_store_clone, timer_clone.task_id).as_ref());
-                }
+                match project_assignment {
+                    Some(p) => {
+                        load_tasks(&task_store_clone, p);
+                        if timer_clone.task_id > 0 {
+                            /* when project_id changes, we might not have a task in the dropdown */
+                            task_chooser_clone.set_active_iter(
+                                iter_from_id(&task_store_clone, timer_clone.task_id).as_ref(),
+                            );
+                        }
+                    }
+                    None => {}
+                };
             }
             None => {}
         }
@@ -273,8 +281,9 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
 
     let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
     let notes_input = gtk::Entry::new();
-    notes_input.set_property("activates-default", &true)
-            .expect("could not allow default activation");
+    notes_input
+        .set_property("activates-default", &true)
+        .expect("could not allow default activation");
     inputs.pack_start(&notes_input, true, true, 0);
     match &timer_clone2.notes {
         Some(n) => notes_input.set_text(&n),
@@ -282,8 +291,9 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     }
 
     let hour_input = gtk::Entry::new();
-    hour_input.set_property("activates-default", &true)
-            .expect("could not allow default activation");
+    hour_input
+        .set_property("activates-default", &true)
+        .expect("could not allow default activation");
     inputs.pack_start(&hour_input, false, false, 0);
     match timer_clone2.hours {
         Some(h) => hour_input.set_text(&harvest::f32_to_duration_str(h)),
@@ -302,6 +312,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     let project_store_clone2 = project_store.clone();
     let task_store_clone2 = task_store.clone();
     let popup_clone = popup.clone();
+    let project_assignments_ref2 = Rc::clone(&project_assignments);
 
     if timer_clone2.id == None {
         start_button.set_label("Start Timer");
@@ -309,12 +320,17 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
             Some(index) => {
                 match task_chooser_clone2.get_active() {
                     Some(task_index) => {
-                        let project = project_from_index(&project_store_clone2, index);
+                        let project_assignment = project_assignment_from_index(
+                            &project_store_clone2,
+                            index,
+                            &project_assignments_ref2,
+                        )
+                        .expect("project not found");
                         /* TODO remove api init here */
                         let api = Harvest::new();
                         let task = task_from_index(&task_store_clone2, task_index);
                         api.start_timer(
-                            &project,
+                            &project_assignment.project,
                             &task,
                             &notes_input.get_text().unwrap(),
                             harvest::duration_str_to_f32(&hour_input.get_text().unwrap()),
@@ -332,13 +348,18 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
             Some(index) => {
                 match task_chooser_clone2.get_active() {
                     Some(task_index) => {
-                        let project = project_from_index(&project_store_clone2, index);
+                        let project_assignment = project_assignment_from_index(
+                            &project_store_clone2,
+                            index,
+                            &project_assignments_ref2,
+                        )
+                        .expect("project not found");
                         /* TODO remove api init here */
                         let api = Harvest::new();
                         let task = task_from_index(&task_store_clone2, task_index);
                         api.update_timer(&harvest::Timer {
                             id: timer_clone2.id,
-                            project_id: project.id,
+                            project_id: project_assignment.project.id,
                             task_id: task.id,
                             notes: Some(notes_input.get_text().unwrap().to_string()),
                             hours: Some(harvest::duration_str_to_f32(
@@ -361,17 +382,19 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     popup
 }
 
-fn project_from_index(store: &gtk::ListStore, index: u32) -> harvest::Project {
+fn project_assignment_from_index<'a>(
+    store: &gtk::ListStore,
+    index: u32,
+    project_assignments: &'a Vec<harvest::ProjectAssignment>,
+) -> Option<&'a harvest::ProjectAssignment> {
     let iter = &store.get_iter_from_string(&format!("{}", index)).unwrap();
     let id = store.get_value(iter, 1).get::<u32>().unwrap();
-    let code = store.get_value(iter, 2).get::<String>().unwrap();
-    let name = store.get_value(iter, 3).get::<String>().unwrap();
-    harvest::Project {
-        id: id,
-        client: None,
-        name: name,
-        code: code,
+    for project_assignment in project_assignments {
+        if project_assignment.project.id == id {
+            return Some(project_assignment);
+        }
     }
+    None
 }
 
 fn iter_from_id(store: &gtk::ListStore, id: u32) -> Option<gtk::TreeIter> {
@@ -394,10 +417,8 @@ fn task_from_index(store: &gtk::ListStore, index: u32) -> harvest::Task {
     harvest::Task { id: id, name: name }
 }
 
-fn load_tasks(store: &gtk::ListStore, project: harvest::Project) {
-    /* TODO remove api init here */
-    let api = Harvest::new();
-    for task_assignment in &api.project_task_assignments(&project) {
+fn load_tasks(store: &gtk::ListStore, project_assignment: &harvest::ProjectAssignment) {
+    for task_assignment in &project_assignment.task_assignments {
         store.set(
             &store.append(),
             &[0, 1],
