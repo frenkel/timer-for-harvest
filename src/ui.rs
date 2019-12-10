@@ -105,10 +105,14 @@ impl Ui {
             let project_label = left_aligned_label(&project_client);
             project_label.set_use_markup(true);
             data.pack_start(&project_label, true, false, 0);
+            let notes = match time_entry.notes.as_ref() {
+                Some(n) => n.to_string(),
+                None => "".to_string(),
+            };
             let task_notes = format!(
                 "{} - {}",
                 &time_entry.task.name,
-                &time_entry.notes.as_ref().unwrap().to_string()
+                &notes,
             );
             let notes_label = left_aligned_label(&task_notes);
             notes_label.set_line_wrap(true);
