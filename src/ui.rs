@@ -110,8 +110,10 @@ impl Ui {
                 &time_entry.task.name,
                 &time_entry.notes.as_ref().unwrap().to_string()
             );
+            let notes_label = left_aligned_label(&task_notes);
+            notes_label.set_line_wrap(true);
             data.pack_start(
-                &left_aligned_label(&task_notes),
+                &notes_label,
                 true,
                 false,
                 0,
