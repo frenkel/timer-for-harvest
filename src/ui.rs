@@ -147,8 +147,10 @@ impl Ui {
                     Ui::load_time_entries(&button_ui_ref);
                 });
             };
-
-            row.pack_start(&button, false, false, 0);
+            let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 1);
+            prevent_vexpand.set_valign(gtk::Align::Center);
+            prevent_vexpand.pack_start(&button, false, false, 0);
+            row.pack_start(&prevent_vexpand, false, false, 0);
             let edit_button = gtk::Button::new_with_label("Edit");
             let window_clone2 = ui.main_window.clone();
             let edit_button_ui_ref = Rc::clone(&ui);
@@ -175,7 +177,10 @@ impl Ui {
                     Inhibit(false)
                 });
             });
-            row.pack_start(&edit_button, false, false, 0);
+            let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 1);
+            prevent_vexpand.set_valign(gtk::Align::Center);
+            prevent_vexpand.pack_start(&edit_button, false, false, 0);
+            row.pack_start(&prevent_vexpand, false, false, 0);
             rows.pack_end(&row, true, false, 5);
         }
 
