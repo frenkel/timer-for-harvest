@@ -246,19 +246,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     let completer = gtk::EntryCompletion::new();
     completer.set_model(Some(&project_store));
     completer.set_text_column(0);
-    completer.set_match_func(|completion, key, iter| {
-        let row = completion.get_model()
-                .unwrap()
-                .get_value(iter, 0)
-                .get::<String>()
-                .unwrap();
-        /* key is already lower case */
-        if row.to_lowercase().contains(key) {
-            true
-        } else {
-            false
-        }
-    });
+    completer.set_match_func(fuzzy_matching);
     let project_chooser_clone2 = project_chooser.clone();
     completer.connect_match_selected(move |_completion, _model, iter| {
         project_chooser_clone2.set_active_iter(Some(&iter));
@@ -472,5 +460,20 @@ fn name_and_code(project: &harvest::Project) -> String {
         project.name.clone()
     } else {
         format!("[{}] {}", project.code, project.name)
+    }
+}
+
+fn fuzzy_matching(completion: &gtk::EntryCompletion, key: &str, iter: &gtk::TreeIter) -> bool {
+    let store = completion.get_model().unwrap();
+    let column_number = completion.get_text_column();
+    let row = store.get_value(iter, column_number)
+            .get::<String>()
+            .unwrap();
+
+    /* key is already lower case */
+    if row.to_lowercase().contains(key) {
+        true
+    } else {
+        false
     }
 }
