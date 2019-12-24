@@ -58,19 +58,8 @@ impl Ui {
 
     pub fn connect_main_window_events(ui: &Rc<Ui>) {
         let key_press_event_ui_ref = Rc::clone(&ui);
-        ui.main_window
-            .connect_key_press_event(move |_window, event| {
-                if event.get_keyval() == 65474 {
-                    /* F5 key pressed */
-                    Ui::load_time_entries(&key_press_event_ui_ref);
-                    Inhibit(true)
-                } else {
-                    Inhibit(false)
-                }
-            });
-
         let button_ui_ref = Rc::clone(&ui);
-        ui.start_button.connect_clicked(move |_| {
+        let open_popup = move |ui_ref: &Rc<Ui>| {
             let popup = build_popup(harvest::Timer {
                 id: None,
                 project_id: 0,
@@ -80,19 +69,37 @@ impl Ui {
                 hours: None,
                 is_running: false,
             });
-            button_ui_ref
+            ui_ref
                 .main_window
                 .get_application()
                 .unwrap()
                 .add_window(&popup);
-            popup.set_transient_for(Some(&button_ui_ref.main_window));
+            popup.set_transient_for(Some(&ui_ref.main_window));
             popup.show_all();
-            let delete_event_ref = Rc::clone(&button_ui_ref);
+            let delete_event_ref = Rc::clone(&ui_ref);
             popup.connect_delete_event(move |_, _| {
                 Ui::load_time_entries(&delete_event_ref);
                 Inhibit(false)
             });
+        };
+
+        ui.main_window
+            .connect_key_press_event(move |_window, event| {
+                if event.get_keyval() == gdk::enums::key::F5 {
+                    Ui::load_time_entries(&key_press_event_ui_ref);
+                    Inhibit(true)
+                } else if event.get_keyval() == gdk::enums::key::n {
+                    open_popup(&key_press_event_ui_ref);
+                    Inhibit(true)
+                } else {
+                    Inhibit(false)
+                }
+            });
+
+        ui.start_button.connect_clicked(move |_| {
+            open_popup(&button_ui_ref);
         });
+
     }
 
     fn load_time_entries(ui: &Rc<Ui>) {
