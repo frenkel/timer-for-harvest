@@ -98,13 +98,16 @@ impl Ui {
     fn load_time_entries(ui: &Rc<Ui>) {
         let user = ui.api.current_user();
         let time_entries = ui.api.time_entries_today(user);
+        let mut total_hours = 0.0;
         let rows = gtk::Box::new(
             gtk::Orientation::Vertical,
             time_entries.len().try_into().unwrap(),
         );
 
         for time_entry in time_entries {
-            let row = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+            total_hours += time_entry.hours;
+
+            let row = gtk::Box::new(gtk::Orientation::Horizontal, 4);
             let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
             let project_client = format!(
                 "<b>{}</b> ({})",
@@ -181,8 +184,15 @@ impl Ui {
             prevent_vexpand.set_valign(gtk::Align::Center);
             prevent_vexpand.pack_start(&edit_button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
-            rows.pack_end(&row, true, false, 5);
+            rows.pack_start(&row, true, false, 5);
         }
+
+        let total_hours_label = left_aligned_label(&format!(
+            "<b>{}</b>",
+            harvest::f32_to_duration_str(total_hours)
+        ));
+        total_hours_label.set_use_markup(true);
+        rows.pack_start(&total_hours_label, true, false, 5);
 
         match ui.main_window.get_children().first() {
             Some(child) => {
