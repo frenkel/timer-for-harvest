@@ -223,6 +223,15 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     popup.set_type_hint(gdk::WindowTypeHint::Dialog);
 
     popup.connect_delete_event(|_, _| Inhibit(false));
+    popup.add_events(gdk::EventMask::KEY_PRESS_MASK);
+    popup.connect_key_press_event(|window, event| {
+        if event.get_keyval() == gdk::enums::key::Escape {
+            window.close();
+            Inhibit(true)
+        } else {
+            Inhibit(false)
+        }
+    });
 
     let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
     let api = Harvest::new();
