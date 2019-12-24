@@ -243,12 +243,12 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     let project_chooser = gtk::ComboBox::new_with_model_and_entry(&project_store);
     project_chooser.set_entry_text_column(0);
 
-    let completer = gtk::EntryCompletion::new();
-    completer.set_model(Some(&project_store));
-    completer.set_text_column(0);
-    completer.set_match_func(fuzzy_matching);
+    let project_completer = gtk::EntryCompletion::new();
+    project_completer.set_model(Some(&project_store));
+    project_completer.set_text_column(0);
+    project_completer.set_match_func(fuzzy_matching);
     let project_chooser_clone2 = project_chooser.clone();
-    completer.connect_match_selected(move |_completion, _model, iter| {
+    project_completer.connect_match_selected(move |_completion, _model, iter| {
         project_chooser_clone2.set_active_iter(Some(&iter));
         Inhibit(false)
     });
@@ -256,7 +256,7 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     project_chooser.get_child().unwrap()
             .downcast::<gtk::Entry>()
             .unwrap()
-            .set_completion(Some(&completer));
+            .set_completion(Some(&project_completer));
     data.pack_start(&project_chooser, true, false, 0);
 
     let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
