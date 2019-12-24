@@ -260,10 +260,23 @@ fn build_popup(timer: harvest::Timer) -> gtk::Window {
     data.pack_start(&project_chooser, true, false, 0);
 
     let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
-    let task_chooser = gtk::ComboBox::new_with_model(&task_store);
-    let cell = gtk::CellRendererText::new();
-    task_chooser.pack_start(&cell, true);
-    task_chooser.add_attribute(&cell, "text", 0);
+    let task_chooser = gtk::ComboBox::new_with_model_and_entry(&task_store);
+    task_chooser.set_entry_text_column(0);
+
+    let task_completer = gtk::EntryCompletion::new();
+    task_completer.set_model(Some(&task_store));
+    task_completer.set_text_column(0);
+    task_completer.set_match_func(fuzzy_matching);
+    let task_chooser_clone2 = task_chooser.clone();
+    task_completer.connect_match_selected(move |_completion, _model, iter| {
+        task_chooser_clone2.set_active_iter(Some(&iter));
+        Inhibit(false)
+    });
+
+    task_chooser.get_child().unwrap()
+            .downcast::<gtk::Entry>()
+            .unwrap()
+            .set_completion(Some(&task_completer));
     data.pack_start(&task_chooser, true, false, 0);
 
     let rc = Rc::new(timer);
