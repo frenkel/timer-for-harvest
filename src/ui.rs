@@ -7,7 +7,7 @@ use std::rc::Rc;
 
 pub struct Ui {
     main_window: gtk::ApplicationWindow,
-    api: Harvest,
+    api: Rc<Harvest>,
     start_button: gtk::Button,
 }
 
@@ -51,7 +51,7 @@ impl Ui {
 
         Ui {
             main_window: window,
-            api: Harvest::new(),
+            api: Rc::new(Harvest::new()),
             start_button: button,
         }
     }
@@ -362,6 +362,7 @@ impl Ui {
         let popup_clone = popup.clone();
         let project_assignments_ref2 = Rc::clone(&project_assignments);
 
+        let api_ref = Rc::clone(&self.api);
         if timer_clone2.id == None {
             start_button.set_label("Start Timer");
             start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
@@ -374,10 +375,8 @@ impl Ui {
                                 &project_assignments_ref2,
                             )
                             .expect("project not found");
-                            /* TODO remove api init here */
-                            let api = Harvest::new();
                             let task = Ui::task_from_index(&task_store_clone2, task_index);
-                            api.start_timer(
+                            api_ref.start_timer(
                                 &project_assignment.project,
                                 &task,
                                 &notes_input.get_text().unwrap(),
@@ -402,10 +401,8 @@ impl Ui {
                                 &project_assignments_ref2,
                             )
                             .expect("project not found");
-                            /* TODO remove api init here */
-                            let api = Harvest::new();
                             let task = Ui::task_from_index(&task_store_clone2, task_index);
-                            api.update_timer(&harvest::Timer {
+                            api_ref.update_timer(&harvest::Timer {
                                 id: timer_clone2.id,
                                 project_id: project_assignment.project.id,
                                 task_id: task.id,
