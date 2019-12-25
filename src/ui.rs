@@ -118,7 +118,7 @@ impl Ui {
             let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
             let project_client = format!(
                 "<b>{}</b> ({})",
-                &Ui::name_and_code(&time_entry.project),
+                &time_entry.project.name_and_code(),
                 &time_entry.client.name
             );
             let project_label = left_aligned_label(&project_client);
@@ -246,7 +246,7 @@ impl Ui {
                 &project_store.append(),
                 &[0, 1],
                 &[
-                    &Ui::name_and_code(&project_assignment.project),
+                    &project_assignment.project.name_and_code(),
                     &project_assignment.project.id,
                 ],
             );
@@ -480,14 +480,6 @@ impl Ui {
                 &[0, 1],
                 &[&task_assignment.task.name, &task_assignment.task.id],
             );
-        }
-    }
-
-    fn name_and_code(project: &harvest::Project) -> String {
-        if project.code == "" {
-            project.name.clone()
-        } else {
-            format!("[{}] {}", project.code, project.name)
         }
     }
 

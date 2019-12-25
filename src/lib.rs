@@ -120,6 +120,16 @@ pub struct User {
     pub id: u32,
 }
 
+impl Project {
+    pub fn name_and_code(&self) -> String {
+        if self.code == "" {
+            self.name.clone()
+        } else {
+            format!("[{}] {}", self.code, self.name)
+        }
+    }
+}
+
 impl Harvest {
     pub fn new() -> Harvest {
         let mut file = File::open("config.json").unwrap();
