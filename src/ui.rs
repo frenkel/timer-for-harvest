@@ -99,7 +99,6 @@ impl Ui {
         ui.start_button.connect_clicked(move |_| {
             open_popup(&button_ui_ref);
         });
-
     }
 
     fn load_time_entries(ui: &Rc<Ui>) {
@@ -268,10 +267,12 @@ impl Ui {
             Inhibit(false)
         });
 
-        project_chooser.get_child().unwrap()
-                .downcast::<gtk::Entry>()
-                .unwrap()
-                .set_completion(Some(&project_completer));
+        project_chooser
+            .get_child()
+            .unwrap()
+            .downcast::<gtk::Entry>()
+            .unwrap()
+            .set_completion(Some(&project_completer));
         data.pack_start(&project_chooser, true, false, 0);
 
         let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
@@ -288,10 +289,12 @@ impl Ui {
             Inhibit(false)
         });
 
-        task_chooser.get_child().unwrap()
-                .downcast::<gtk::Entry>()
-                .unwrap()
-                .set_completion(Some(&task_completer));
+        task_chooser
+            .get_child()
+            .unwrap()
+            .downcast::<gtk::Entry>()
+            .unwrap()
+            .set_completion(Some(&task_completer));
         data.pack_start(&task_chooser, true, false, 0);
 
         let rc = Rc::new(timer);
@@ -422,7 +425,9 @@ impl Ui {
                                     &hour_input.get_text().unwrap(),
                                 )),
                                 is_running: timer_clone2.is_running,
-                                spent_date: Some(timer_clone2.spent_date.as_ref().unwrap().to_string()),
+                                spent_date: Some(
+                                    timer_clone2.spent_date.as_ref().unwrap().to_string(),
+                                ),
                             });
                             popup_clone.close();
                         }
@@ -486,9 +491,10 @@ impl Ui {
     fn fuzzy_matching(completion: &gtk::EntryCompletion, key: &str, iter: &gtk::TreeIter) -> bool {
         let store = completion.get_model().unwrap();
         let column_number = completion.get_text_column();
-        let row = store.get_value(iter, column_number)
-                .get::<String>()
-                .unwrap();
+        let row = store
+            .get_value(iter, column_number)
+            .get::<String>()
+            .unwrap();
 
         /* key is already lower case */
         if row.to_lowercase().contains(key) {
