@@ -60,7 +60,7 @@ impl Ui {
         let key_press_event_ui_ref = Rc::clone(&ui);
         let button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
-            let popup = Ui::build_popup(harvest::Timer {
+            let popup = ui_ref.build_popup(harvest::Timer {
                 id: None,
                 project_id: 0,
                 task_id: 0,
@@ -69,13 +69,6 @@ impl Ui {
                 hours: None,
                 is_running: false,
             });
-            ui_ref
-                .main_window
-                .get_application()
-                .unwrap()
-                .add_window(&popup);
-            popup.set_transient_for(Some(&ui_ref.main_window));
-            popup.show_all();
             let delete_event_ref = Rc::clone(&ui_ref);
             popup.connect_delete_event(move |_, _| {
                 Ui::load_time_entries(&delete_event_ref);
@@ -161,14 +154,13 @@ impl Ui {
             prevent_vexpand.pack_start(&button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
             let edit_button = gtk::Button::new_with_label("Edit");
-            let window_clone2 = ui.main_window.clone();
             let edit_button_ui_ref = Rc::clone(&ui);
             edit_button.connect_clicked(move |_| {
                 let notes = match rc.notes.as_ref() {
                     Some(n) => Some(n.to_string()),
                     None => None,
                 };
-                let popup = Ui::build_popup(harvest::Timer {
+                let popup = edit_button_ui_ref.build_popup(harvest::Timer {
                     id: Some(rc.id),
                     project_id: rc.project.id,
                     task_id: rc.task.id,
@@ -177,9 +169,6 @@ impl Ui {
                     hours: Some(rc.hours),
                     is_running: rc.is_running,
                 });
-                window_clone2.get_application().unwrap().add_window(&popup);
-                popup.set_transient_for(Some(&window_clone2));
-                popup.show_all();
                 let delete_event_ui_ref = Rc::clone(&edit_button_ui_ref);
                 popup.connect_delete_event(move |_, _| {
                     Ui::load_time_entries(&delete_event_ui_ref);
@@ -212,7 +201,7 @@ impl Ui {
         ui.main_window.show_all();
     }
 
-    fn build_popup(timer: harvest::Timer) -> gtk::Window {
+    fn build_popup(&self, timer: harvest::Timer) -> gtk::Window {
         let popup = gtk::Window::new(gtk::WindowType::Toplevel);
 
         popup.set_title("Add time entry");
@@ -440,6 +429,13 @@ impl Ui {
 
         popup.add(&data);
         start_button.grab_default();
+        self
+            .main_window
+            .get_application()
+            .unwrap()
+            .add_window(&popup);
+        popup.set_transient_for(Some(&self.main_window));
+        popup.show_all();
         popup
     }
 
