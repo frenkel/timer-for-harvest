@@ -3,12 +3,14 @@ use gtk::prelude::*;
 use harvest::Harvest;
 use std::convert::TryInto;
 use std::env::args;
+use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Ui {
     main_window: gtk::ApplicationWindow,
     api: Rc<Harvest>,
     start_button: gtk::Button,
+    time_entries: Rc<RefCell<Vec<(Rc<harvest::TimeEntry>, gtk::Button, gtk::Button)>>>
 }
 
 fn left_aligned_label(text: &str) -> gtk::Label {
@@ -23,8 +25,9 @@ pub fn main_window() {
 
     application.connect_activate(|app| {
         let ui = Rc::new(Ui::new(app));
-        Ui::load_time_entries(&ui);
-        Ui::connect_main_window_events(&ui);
+        Ui::connect_main_window_signals(&ui);
+        ui.load_time_entries();
+        Ui::connect_time_entry_signals(&ui);
     });
 
     application.run(&args().collect::<Vec<_>>());
@@ -53,10 +56,11 @@ impl Ui {
             main_window: window,
             api: Rc::new(Harvest::new()),
             start_button: button,
+            time_entries: Rc::new(RefCell::new(vec!())),
         }
     }
 
-    pub fn connect_main_window_events(ui: &Rc<Ui>) {
+    pub fn connect_main_window_signals(ui: &Rc<Ui>) {
         let key_press_event_ui_ref = Rc::clone(&ui);
         let button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
@@ -71,7 +75,8 @@ impl Ui {
             });
             let delete_event_ref = Rc::clone(&ui_ref);
             popup.connect_delete_event(move |_, _| {
-                Ui::load_time_entries(&delete_event_ref);
+                delete_event_ref.load_time_entries();
+                Ui::connect_time_entry_signals(&delete_event_ref);
                 Inhibit(false)
             });
         };
@@ -79,7 +84,8 @@ impl Ui {
         ui.main_window
             .connect_key_press_event(move |_window, event| {
                 if event.get_keyval() == gdk::enums::key::F5 {
-                    Ui::load_time_entries(&key_press_event_ui_ref);
+                    key_press_event_ui_ref.load_time_entries();
+                    Ui::connect_time_entry_signals(&key_press_event_ui_ref);
                     Inhibit(true)
                 } else if event.get_keyval() == gdk::enums::key::n {
                     open_popup(&key_press_event_ui_ref);
@@ -94,15 +100,57 @@ impl Ui {
         });
     }
 
-    fn load_time_entries(ui: &Rc<Ui>) {
-        let user = ui.api.current_user();
-        let time_entries = ui.api.time_entries_today(user);
+    pub fn connect_time_entry_signals(ui: &Rc<Ui>) {
+        for (time_entry, button, edit_button) in ui.time_entries.borrow().iter() {
+            let api_ref = Rc::clone(&ui.api);
+            let ui_ref = Rc::clone(&ui);
+            let time_entry_ref = Rc::clone(&time_entry);
+            button.connect_clicked(move |_| {
+                if time_entry_ref.is_running {
+                    api_ref.stop_timer(&time_entry_ref);
+                } else {
+                    api_ref.restart_timer(&time_entry_ref);
+                }
+                ui_ref.load_time_entries();
+                Ui::connect_time_entry_signals(&ui_ref);
+            });
+
+            let ui_ref2 = Rc::clone(&ui);
+            let time_entry_ref2 = Rc::clone(&time_entry);
+            edit_button.connect_clicked(move |_| {
+                let notes = match time_entry_ref2.notes.as_ref() {
+                    Some(n) => Some(n.to_string()),
+                    None => None,
+                };
+                let popup = ui_ref2.build_popup(harvest::Timer {
+                    id: Some(time_entry_ref2.id),
+                    project_id: time_entry_ref2.project.id,
+                    task_id: time_entry_ref2.task.id,
+                    spent_date: Some(time_entry_ref2.spent_date.clone()),
+                    notes: notes,
+                    hours: Some(time_entry_ref2.hours),
+                    is_running: time_entry_ref2.is_running,
+                });
+                let delete_event_ui_ref = Rc::clone(&ui_ref2);
+                popup.connect_delete_event(move |_, _| {
+                    delete_event_ui_ref.load_time_entries();
+                    Ui::connect_time_entry_signals(&delete_event_ui_ref);
+                    Inhibit(false)
+                });
+            });
+        }
+    }
+
+    fn load_time_entries(&self) {
+        let user = self.api.current_user();
+        let time_entries = self.api.time_entries_today(user);
         let mut total_hours = 0.0;
         let rows = gtk::Box::new(
             gtk::Orientation::Vertical,
             time_entries.len().try_into().unwrap(),
         );
 
+        self.time_entries.borrow_mut().clear();
         for time_entry in time_entries {
             total_hours += time_entry.hours;
 
@@ -134,52 +182,23 @@ impl Ui {
             let button = gtk::Button::new();
             let rc = Rc::new(time_entry);
             let time_entry_clone = Rc::clone(&rc);
-            let button_ui_ref = Rc::clone(&ui);
             if time_entry_clone.is_running {
                 button.set_label("Stop");
-                button.connect_clicked(move |_| {
-                    button_ui_ref.api.stop_timer(&time_entry_clone);
-                    Ui::load_time_entries(&button_ui_ref);
-                });
                 button.get_style_context().add_class("suggested-action");
             } else {
                 button.set_label("Start");
-                button.connect_clicked(move |_| {
-                    button_ui_ref.api.restart_timer(&time_entry_clone);
-                    Ui::load_time_entries(&button_ui_ref);
-                });
             };
             let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 1);
             prevent_vexpand.set_valign(gtk::Align::Center);
             prevent_vexpand.pack_start(&button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
             let edit_button = gtk::Button::new_with_label("Edit");
-            let edit_button_ui_ref = Rc::clone(&ui);
-            edit_button.connect_clicked(move |_| {
-                let notes = match rc.notes.as_ref() {
-                    Some(n) => Some(n.to_string()),
-                    None => None,
-                };
-                let popup = edit_button_ui_ref.build_popup(harvest::Timer {
-                    id: Some(rc.id),
-                    project_id: rc.project.id,
-                    task_id: rc.task.id,
-                    spent_date: Some(rc.spent_date.clone()),
-                    notes: notes,
-                    hours: Some(rc.hours),
-                    is_running: rc.is_running,
-                });
-                let delete_event_ui_ref = Rc::clone(&edit_button_ui_ref);
-                popup.connect_delete_event(move |_, _| {
-                    Ui::load_time_entries(&delete_event_ui_ref);
-                    Inhibit(false)
-                });
-            });
             let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 1);
             prevent_vexpand.set_valign(gtk::Align::Center);
             prevent_vexpand.pack_start(&edit_button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
             rows.pack_start(&row, true, false, 5);
+            self.time_entries.borrow_mut().push((rc, button, edit_button));
         }
 
         let total_hours_label = left_aligned_label(&format!(
@@ -189,16 +208,16 @@ impl Ui {
         total_hours_label.set_use_markup(true);
         rows.pack_start(&total_hours_label, true, false, 5);
 
-        match ui.main_window.get_children().first() {
+        match self.main_window.get_children().first() {
             Some(child) => {
                 if child.is::<gtk::Box>() {
-                    ui.main_window.remove(child);
+                    self.main_window.remove(child);
                 }
             }
             None => {}
         }
-        ui.main_window.add(&rows);
-        ui.main_window.show_all();
+        self.main_window.add(&rows);
+        self.main_window.show_all();
     }
 
     fn build_popup(&self, timer: harvest::Timer) -> gtk::Window {
