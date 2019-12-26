@@ -10,7 +10,14 @@ pub struct Ui {
     main_window: gtk::ApplicationWindow,
     api: Rc<Harvest>,
     start_button: gtk::Button,
-    time_entries: Rc<RefCell<Vec<(Rc<harvest::TimeEntry>, gtk::Button, gtk::Button)>>>
+    time_entries: Rc<RefCell<Vec<TimeEntryRow>>>
+}
+
+struct TimeEntryRow {
+    time_entry: Rc<RefCell<harvest::TimeEntry>>,
+    start_stop_button: gtk::Button,
+    edit_button: gtk::Button,
+    hours_label: gtk::Label
 }
 
 fn left_aligned_label(text: &str) -> gtk::Label {
@@ -101,35 +108,54 @@ impl Ui {
     }
 
     pub fn connect_time_entry_signals(ui: &Rc<Ui>) {
-        for (time_entry, button, edit_button) in ui.time_entries.borrow().iter() {
+        for time_entry_row in ui.time_entries.borrow().iter() {
+            if time_entry_row.time_entry.borrow().is_running {
+                let time_entry_ref = Rc::clone(&time_entry_row.time_entry);
+                let hours_label_ref = time_entry_row.hours_label.clone();
+
+                gtk::timeout_add_seconds(60, move || {
+                    let mut mut_time_entry_ref = time_entry_ref.borrow_mut();
+                    mut_time_entry_ref.hours += 0.1;
+                    hours_label_ref.set_text(&harvest::f32_to_duration_str(mut_time_entry_ref.hours));
+                    println!("update hours label");
+                    /* TODO update total hours label */
+                    if mut_time_entry_ref.is_running {
+                        glib::Continue(true)
+                    } else {
+                        glib::Continue(false)
+                    }
+                });
+            }
+
             let api_ref = Rc::clone(&ui.api);
             let ui_ref = Rc::clone(&ui);
-            let time_entry_ref = Rc::clone(&time_entry);
-            button.connect_clicked(move |_| {
-                if time_entry_ref.is_running {
-                    api_ref.stop_timer(&time_entry_ref);
+            let time_entry_ref = Rc::clone(&time_entry_row.time_entry);
+            time_entry_row.start_stop_button.connect_clicked(move |_| {
+                if time_entry_ref.borrow().is_running {
+                    api_ref.stop_timer(&time_entry_ref.borrow());
                 } else {
-                    api_ref.restart_timer(&time_entry_ref);
+                    api_ref.restart_timer(&time_entry_ref.borrow());
                 }
                 ui_ref.load_time_entries();
                 Ui::connect_time_entry_signals(&ui_ref);
             });
 
             let ui_ref2 = Rc::clone(&ui);
-            let time_entry_ref2 = Rc::clone(&time_entry);
-            edit_button.connect_clicked(move |_| {
-                let notes = match time_entry_ref2.notes.as_ref() {
+            let time_entry_ref2 = Rc::clone(&time_entry_row.time_entry);
+            time_entry_row.edit_button.connect_clicked(move |_| {
+                let time_entry_ref3 = time_entry_ref2.borrow();
+                let notes = match time_entry_ref3.notes.as_ref() {
                     Some(n) => Some(n.to_string()),
                     None => None,
                 };
                 let popup = ui_ref2.build_popup(harvest::Timer {
-                    id: Some(time_entry_ref2.id),
-                    project_id: time_entry_ref2.project.id,
-                    task_id: time_entry_ref2.task.id,
-                    spent_date: Some(time_entry_ref2.spent_date.clone()),
+                    id: Some(time_entry_ref3.id),
+                    project_id: time_entry_ref3.project.id,
+                    task_id: time_entry_ref3.task.id,
+                    spent_date: Some(time_entry_ref3.spent_date.clone()),
                     notes: notes,
-                    hours: Some(time_entry_ref2.hours),
-                    is_running: time_entry_ref2.is_running,
+                    hours: Some(time_entry_ref3.hours),
+                    is_running: time_entry_ref3.is_running,
                 });
                 let delete_event_ui_ref = Rc::clone(&ui_ref2);
                 popup.connect_delete_event(move |_, _| {
@@ -150,7 +176,13 @@ impl Ui {
             time_entries.len().try_into().unwrap(),
         );
 
+        /* stop all running gtk timers */
+        for old_entry in self.time_entries.borrow().iter() {
+            old_entry.time_entry.borrow_mut().is_running = false;
+        }
+        /* clear old entries */
         self.time_entries.borrow_mut().clear();
+
         for time_entry in time_entries {
             total_hours += time_entry.hours;
 
@@ -173,16 +205,12 @@ impl Ui {
             notes_label.set_line_wrap(true);
             data.pack_start(&notes_label, true, false, 0);
             row.pack_start(&data, true, true, 0);
-            row.pack_start(
-                &left_aligned_label(&harvest::f32_to_duration_str(time_entry.hours)),
-                false,
-                false,
-                10,
-            );
+            let hours_label = left_aligned_label(&harvest::f32_to_duration_str(time_entry.hours));
+            row.pack_start(&hours_label, false, false, 10);
             let button = gtk::Button::new();
-            let rc = Rc::new(time_entry);
+            let rc = Rc::new(RefCell::new(time_entry));
             let time_entry_clone = Rc::clone(&rc);
-            if time_entry_clone.is_running {
+            if time_entry_clone.borrow().is_running {
                 button.set_label("Stop");
                 button.get_style_context().add_class("suggested-action");
             } else {
@@ -198,7 +226,14 @@ impl Ui {
             prevent_vexpand.pack_start(&edit_button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
             rows.pack_start(&row, true, false, 5);
-            self.time_entries.borrow_mut().push((rc, button, edit_button));
+            self.time_entries.borrow_mut().push(
+                TimeEntryRow {
+                    time_entry: rc,
+                    start_stop_button: button,
+                    edit_button: edit_button,
+                    hours_label: hours_label
+                }
+            );
         }
 
         let total_hours_label = left_aligned_label(&format!(
