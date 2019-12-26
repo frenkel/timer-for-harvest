@@ -110,16 +110,33 @@ impl Ui {
     pub fn connect_time_entry_signals(ui: &Rc<Ui>) {
         for time_entry_row in ui.time_entries.borrow().iter() {
             if time_entry_row.time_entry.borrow().is_running {
+                let time_entries_ref = Rc::clone(&ui.time_entries);
                 let time_entry_ref = Rc::clone(&time_entry_row.time_entry);
                 let hours_label_ref = time_entry_row.hours_label.clone();
+                let header_bar_ref = ui.main_window.get_titlebar().unwrap()
+                            .downcast::<gtk::HeaderBar>()
+                            .unwrap()
+                            .clone();
 
                 gtk::timeout_add_seconds(60, move || {
                     let mut mut_time_entry_ref = time_entry_ref.borrow_mut();
-                    mut_time_entry_ref.hours += 0.1;
-                    hours_label_ref.set_text(&harvest::f32_to_duration_str(mut_time_entry_ref.hours));
-                    println!("update hours label");
-                    /* TODO update total hours label */
                     if mut_time_entry_ref.is_running {
+                        mut_time_entry_ref.hours += 1.0 / 60.0;
+
+                        hours_label_ref.set_text(&harvest::f32_to_duration_str(mut_time_entry_ref.hours));
+
+                        let mut total = 0.0;
+                        for time_entry_row in time_entries_ref.borrow().iter() {
+                            if time_entry_row.time_entry.try_borrow().is_ok() {
+                                total += time_entry_row.time_entry.borrow().hours;
+                            } else {
+                                total += mut_time_entry_ref.hours;
+                            }
+                        }
+                        println!("update hours labels");
+                        let title = format!("Harvest - {}", harvest::f32_to_duration_str(total));
+                        header_bar_ref.set_title(Some(&title));
+
                         glib::Continue(true)
                     } else {
                         glib::Continue(false)
@@ -236,12 +253,11 @@ impl Ui {
             );
         }
 
-        let total_hours_label = left_aligned_label(&format!(
-            "<b>{}</b>",
-            harvest::f32_to_duration_str(total_hours)
-        ));
-        total_hours_label.set_use_markup(true);
-        rows.pack_start(&total_hours_label, true, false, 5);
+        let title = format!("Harvest - {}", harvest::f32_to_duration_str(total_hours));
+        self.main_window.get_titlebar().unwrap()
+                .downcast::<gtk::HeaderBar>()
+                .unwrap()
+                .set_title(Some(&title));
 
         match self.main_window.get_children().first() {
             Some(child) => {
