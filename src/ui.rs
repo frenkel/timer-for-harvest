@@ -133,7 +133,6 @@ impl Ui {
                                 total += mut_time_entry_ref.hours;
                             }
                         }
-                        println!("update hours labels");
                         let title = format!("Harvest - {}", harvest::f32_to_duration_str(total));
                         header_bar_ref.set_title(Some(&title));
 
