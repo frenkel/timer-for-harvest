@@ -241,7 +241,7 @@ impl Ui {
             prevent_vexpand.set_valign(gtk::Align::Center);
             prevent_vexpand.pack_start(&edit_button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
-            rows.pack_start(&row, true, false, 5);
+            rows.pack_end(&row, true, false, 5);
             self.time_entries.borrow_mut().push(
                 TimeEntryRow {
                     time_entry: rc,
