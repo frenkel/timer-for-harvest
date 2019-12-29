@@ -1,7 +1,10 @@
 pub mod ui;
+use harvest::Harvest;
+use std::rc::Rc;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    ui::main_window();
+    let harvest = Rc::new(Harvest::new());
+    ui::main_window(harvest);
 
     Ok(())
 }

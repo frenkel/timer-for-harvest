@@ -26,12 +26,12 @@ fn left_aligned_label(text: &str) -> gtk::Label {
     label
 }
 
-pub fn main_window() {
+pub fn main_window(harvest: Rc<Harvest>) {
     let application =
         gtk::Application::new(Some("nl.frankgroeneveld.harvest"), Default::default()).unwrap();
 
-    application.connect_activate(|app| {
-        let ui = Rc::new(Ui::new(app));
+    application.connect_activate(move |app| {
+        let ui = Rc::new(Ui::new(Rc::clone(&harvest), app));
         Ui::connect_main_window_signals(&ui);
         ui.load_time_entries();
         Ui::connect_time_entry_signals(&ui);
@@ -41,7 +41,7 @@ pub fn main_window() {
 }
 
 impl Ui {
-    pub fn new(application: &gtk::Application) -> Ui {
+    pub fn new(harvest: Rc<Harvest>, application: &gtk::Application) -> Ui {
         let window = gtk::ApplicationWindow::new(application);
         let container = gtk::HeaderBar::new();
 
@@ -61,7 +61,7 @@ impl Ui {
 
         Ui {
             main_window: window,
-            api: Rc::new(Harvest::new()),
+            api: harvest,
             start_button: button,
             time_entries: Rc::new(RefCell::new(vec![])),
         }

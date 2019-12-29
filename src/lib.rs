@@ -2,13 +2,17 @@ use chrono::Local;
 use hyper;
 use serde;
 use serde_json;
-use std::fs::File;
 use std::io::Read;
+use std::io::Write;
+use std::net::TcpListener;
+use std::net::TcpStream;
+use std::process::Command;
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Harvest {
     token: String,
     account_id: u32,
+    expires_in: u32,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -133,12 +137,56 @@ impl Project {
 
 impl Harvest {
     pub fn new() -> Harvest {
-        let mut file = File::open("config.json").unwrap();
-        let mut content = String::new();
+        let listener = TcpListener::bind("127.0.0.1:12345")
+            .expect("Make sure port 12345 is not in use for the OAuth authorization to succeed");
 
-        file.read_to_string(&mut content).unwrap();
+        /* TODO refactor client id hardcode */
+        Command::new("xdg-open")
+            .arg(format!(
+                "https://id.getharvest.com/oauth2/authorize?client_id={}&response_type=token",
+                "8ApPquiiqcpFrBt-GX7DhRDN"
+            ))
+            .output()
+            .expect("Unable to open browser");
 
-        serde_json::from_str(&content).unwrap()
+        for stream in listener.incoming() {
+            let stream = stream.unwrap();
+            let result = Harvest::authorize_callback(stream);
+
+            return Harvest {
+                token: result.0,
+                account_id: result.1.parse().unwrap(),
+                expires_in: result.2.parse().unwrap(),
+            };
+        }
+
+        Harvest {
+            token: "".to_string(),
+            account_id: 0,
+            expires_in: 0,
+        }
+    }
+
+    fn authorize_callback(mut stream: TcpStream) -> (String, String, String) {
+        let mut buffer = [0; 1024];
+
+        stream.read(&mut buffer).unwrap();
+
+        let request = String::from_utf8_lossy(&buffer[..]).to_string();
+        let first_line = request.lines().next().unwrap();
+        let result = parse_account_details(&first_line);
+
+        let response = "HTTP/1.1 200 OK\r\n\r\n<!DOCTYPE html>
+            <html>
+                <body>
+                    Authorized successfully
+                </body>
+            </html>\r\n";
+
+        stream.write(response.as_bytes()).unwrap();
+        stream.flush().unwrap();
+
+        result
     }
 
     pub fn active_project_assignments(&self) -> Vec<ProjectAssignment> {
