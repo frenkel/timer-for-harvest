@@ -1,5 +1,7 @@
 [package]
 name = "harvest"
+description = "Harvest for Linux"
+homepage = "https://github.com/frenkel/hfl"
 version = "0.1.6"
 authors = ["Frank Groeneveld <frank@frankgroeneveld.nl>"]
 edition = "2018"

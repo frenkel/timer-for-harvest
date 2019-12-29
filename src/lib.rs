@@ -189,6 +189,18 @@ impl Harvest {
         result
     }
 
+    fn user_agent() -> String {
+        format!(
+            "{} {}.{}.{}{} ({})",
+            env!("CARGO_PKG_DESCRIPTION"),
+            env!("CARGO_PKG_VERSION_MAJOR"),
+            env!("CARGO_PKG_VERSION_MINOR"),
+            env!("CARGO_PKG_VERSION_PATCH"),
+            option_env!("CARGO_PKG_VERSION_PRE").unwrap_or(""),
+            env!("CARGO_PKG_HOMEPAGE")
+        )
+    }
+
     pub fn active_project_assignments(&self) -> Vec<ProjectAssignment> {
         let mut project_assignments: Vec<ProjectAssignment> = vec![];
         let mut current_page = 1;
@@ -322,7 +334,7 @@ impl Harvest {
             .get(url)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
-            .header("User-Agent", "Harvest Linux (TODO)")
+            .header("User-Agent", Harvest::user_agent())
             .send()
             .unwrap()
     }
@@ -339,7 +351,7 @@ impl Harvest {
             .json(&json)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
-            .header("User-Agent", "Harvest Linux (TODO)")
+            .header("User-Agent", Harvest::user_agent())
             .send()
             .unwrap()
     }
@@ -356,7 +368,7 @@ impl Harvest {
             .json(&json)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
-            .header("User-Agent", "Harvest Linux (TODO)")
+            .header("User-Agent", Harvest::user_agent())
             .send()
             .unwrap()
     }
