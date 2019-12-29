@@ -294,8 +294,7 @@ impl Ui {
         });
 
         let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
-        let api = Harvest::new();
-        let mut project_assignments = api.active_project_assignments();
+        let mut project_assignments = self.api.active_project_assignments();
         project_assignments.sort_by(|a, b| {
             a.project
                 .name
