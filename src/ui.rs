@@ -1,23 +1,23 @@
 use gio::prelude::*;
 use gtk::prelude::*;
 use harvest::Harvest;
+use std::cell::RefCell;
 use std::convert::TryInto;
 use std::env::args;
-use std::cell::RefCell;
 use std::rc::Rc;
 
 pub struct Ui {
     main_window: gtk::ApplicationWindow,
     api: Rc<Harvest>,
     start_button: gtk::Button,
-    time_entries: Rc<RefCell<Vec<TimeEntryRow>>>
+    time_entries: Rc<RefCell<Vec<TimeEntryRow>>>,
 }
 
 struct TimeEntryRow {
     time_entry: Rc<RefCell<harvest::TimeEntry>>,
     start_stop_button: gtk::Button,
     edit_button: gtk::Button,
-    hours_label: gtk::Label
+    hours_label: gtk::Label,
 }
 
 fn left_aligned_label(text: &str) -> gtk::Label {
@@ -63,7 +63,7 @@ impl Ui {
             main_window: window,
             api: Rc::new(Harvest::new()),
             start_button: button,
-            time_entries: Rc::new(RefCell::new(vec!())),
+            time_entries: Rc::new(RefCell::new(vec![])),
         }
     }
 
@@ -113,17 +113,21 @@ impl Ui {
                 let time_entries_ref = Rc::clone(&ui.time_entries);
                 let time_entry_ref = Rc::clone(&time_entry_row.time_entry);
                 let hours_label_ref = time_entry_row.hours_label.clone();
-                let header_bar_ref = ui.main_window.get_titlebar().unwrap()
-                            .downcast::<gtk::HeaderBar>()
-                            .unwrap()
-                            .clone();
+                let header_bar_ref = ui
+                    .main_window
+                    .get_titlebar()
+                    .unwrap()
+                    .downcast::<gtk::HeaderBar>()
+                    .unwrap()
+                    .clone();
 
                 gtk::timeout_add_seconds(60, move || {
                     let mut mut_time_entry_ref = time_entry_ref.borrow_mut();
                     if mut_time_entry_ref.is_running {
                         mut_time_entry_ref.hours += 1.0 / 60.0;
 
-                        hours_label_ref.set_text(&harvest::f32_to_duration_str(mut_time_entry_ref.hours));
+                        hours_label_ref
+                            .set_text(&harvest::f32_to_duration_str(mut_time_entry_ref.hours));
 
                         let mut total = 0.0;
                         for time_entry_row in time_entries_ref.borrow().iter() {
@@ -242,21 +246,21 @@ impl Ui {
             prevent_vexpand.pack_start(&edit_button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
             rows.pack_end(&row, true, false, 5);
-            self.time_entries.borrow_mut().push(
-                TimeEntryRow {
-                    time_entry: rc,
-                    start_stop_button: button,
-                    edit_button: edit_button,
-                    hours_label: hours_label
-                }
-            );
+            self.time_entries.borrow_mut().push(TimeEntryRow {
+                time_entry: rc,
+                start_stop_button: button,
+                edit_button: edit_button,
+                hours_label: hours_label,
+            });
         }
 
         let title = format!("Harvest - {}", harvest::f32_to_duration_str(total_hours));
-        self.main_window.get_titlebar().unwrap()
-                .downcast::<gtk::HeaderBar>()
-                .unwrap()
-                .set_title(Some(&title));
+        self.main_window
+            .get_titlebar()
+            .unwrap()
+            .downcast::<gtk::HeaderBar>()
+            .unwrap()
+            .set_title(Some(&title));
 
         match self.main_window.get_children().first() {
             Some(child) => {
@@ -435,68 +439,61 @@ impl Ui {
         if timer_clone2.id == None {
             start_button.set_label("Start Timer");
             start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
-                Some(index) => {
-                    match task_chooser_clone2.get_active() {
-                        Some(task_index) => {
-                            let project_assignment = Ui::project_assignment_from_index(
-                                &project_store_clone2,
-                                index,
-                                &project_assignments_ref2,
-                            )
-                            .expect("project not found");
-                            let task = Ui::task_from_index(&task_store_clone2, task_index);
-                            api_ref.start_timer(
-                                &project_assignment.project,
-                                &task,
-                                &notes_input.get_text().unwrap(),
-                                harvest::duration_str_to_f32(&hour_input.get_text().unwrap()),
-                            );
-                            popup_clone.close();
-                        }
-                        None => {}
+                Some(index) => match task_chooser_clone2.get_active() {
+                    Some(task_index) => {
+                        let project_assignment = Ui::project_assignment_from_index(
+                            &project_store_clone2,
+                            index,
+                            &project_assignments_ref2,
+                        )
+                        .expect("project not found");
+                        let task = Ui::task_from_index(&task_store_clone2, task_index);
+                        api_ref.start_timer(
+                            &project_assignment.project,
+                            &task,
+                            &notes_input.get_text().unwrap(),
+                            harvest::duration_str_to_f32(&hour_input.get_text().unwrap()),
+                        );
+                        popup_clone.close();
                     }
-                }
+                    None => {}
+                },
                 None => {}
             });
         } else {
             start_button.set_label("Save Timer");
             start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
-                Some(index) => {
-                    match task_chooser_clone2.get_active() {
-                        Some(task_index) => {
-                            let project_assignment = Ui::project_assignment_from_index(
-                                &project_store_clone2,
-                                index,
-                                &project_assignments_ref2,
-                            )
-                            .expect("project not found");
-                            let task = Ui::task_from_index(&task_store_clone2, task_index);
-                            api_ref.update_timer(&harvest::Timer {
-                                id: timer_clone2.id,
-                                project_id: project_assignment.project.id,
-                                task_id: task.id,
-                                notes: Some(notes_input.get_text().unwrap().to_string()),
-                                hours: Some(harvest::duration_str_to_f32(
-                                    &hour_input.get_text().unwrap(),
-                                )),
-                                is_running: timer_clone2.is_running,
-                                spent_date: Some(
-                                    timer_clone2.spent_date.as_ref().unwrap().to_string(),
-                                ),
-                            });
-                            popup_clone.close();
-                        }
-                        None => {}
+                Some(index) => match task_chooser_clone2.get_active() {
+                    Some(task_index) => {
+                        let project_assignment = Ui::project_assignment_from_index(
+                            &project_store_clone2,
+                            index,
+                            &project_assignments_ref2,
+                        )
+                        .expect("project not found");
+                        let task = Ui::task_from_index(&task_store_clone2, task_index);
+                        api_ref.update_timer(&harvest::Timer {
+                            id: timer_clone2.id,
+                            project_id: project_assignment.project.id,
+                            task_id: task.id,
+                            notes: Some(notes_input.get_text().unwrap().to_string()),
+                            hours: Some(harvest::duration_str_to_f32(
+                                &hour_input.get_text().unwrap(),
+                            )),
+                            is_running: timer_clone2.is_running,
+                            spent_date: Some(timer_clone2.spent_date.as_ref().unwrap().to_string()),
+                        });
+                        popup_clone.close();
                     }
-                }
+                    None => {}
+                },
                 None => {}
             });
         }
 
         popup.add(&data);
         start_button.grab_default();
-        self
-            .main_window
+        self.main_window
             .get_application()
             .unwrap()
             .add_window(&popup);
