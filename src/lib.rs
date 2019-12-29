@@ -1,4 +1,5 @@
 use chrono::Local;
+use hyper;
 use serde;
 use serde_json;
 use std::fs::File;
@@ -343,4 +344,39 @@ pub fn f32_to_duration_str(duration: f32) -> String {
     let hours = duration - minutes;
 
     format!("{:.0}:{:0>2.0}", hours, minutes * 60.0)
+}
+
+/* TODO improve this messy parse function */
+pub fn parse_account_details(request: &str) -> (String, String, String) {
+    let mut parts = request.split(" ");
+    parts.next(); /* GET */
+    let uri = parts.next().unwrap().parse::<hyper::Uri>().unwrap();
+    let parts = uri.query().unwrap().split("&");
+    let mut access_token = "";
+    let mut account_id = "";
+    let mut expires_in = "";
+
+    for part in parts {
+        if part.starts_with("access_token") {
+            let mut parts = part.split("=");
+            parts.next();
+            access_token = parts.next().unwrap();
+        } else if part.starts_with("scope") {
+            let mut parts = part.split("=");
+            parts.next();
+            account_id = parts.next().unwrap();
+            let mut parts = account_id.split("%3A");
+            parts.next();
+            account_id = parts.next().unwrap();
+        } else if part.starts_with("expires_in") {
+            let mut parts = part.split("=");
+            parts.next();
+            expires_in = parts.next().unwrap();
+        }
+    }
+    (
+        access_token.to_string(),
+        account_id.to_string(),
+        expires_in.to_string(),
+    )
 }
