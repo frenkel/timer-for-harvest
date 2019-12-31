@@ -136,15 +136,16 @@ impl Project {
 }
 
 impl Harvest {
+    const CLIENT_ID: &'static str = "8ApPquiiqcpFrBt-GX7DhRDN";
+
     pub fn new() -> Harvest {
         let listener = TcpListener::bind("127.0.0.1:12345")
-            .expect("Make sure port 12345 is not in use for the OAuth authorization to succeed");
+            .expect("port 12345 is already in use");
 
-        /* TODO refactor client id hardcode */
         Command::new("xdg-open")
             .arg(format!(
                 "https://id.getharvest.com/oauth2/authorize?client_id={}&response_type=token",
-                "8ApPquiiqcpFrBt-GX7DhRDN"
+                Harvest::CLIENT_ID
             ))
             .output()
             .expect("Unable to open browser");
