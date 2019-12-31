@@ -168,12 +168,26 @@ impl Harvest {
     }
 
     fn authorize_callback(mut stream: TcpStream) -> (String, String, String) {
-        let mut buffer = [0; 1024];
+        let mut buffer = [0; 512];
+        let mut first_line = "".to_string();
 
-        stream.read(&mut buffer).unwrap();
+        loop {
+            match stream.read(&mut buffer) {
+                Ok(n) => {
+                    if first_line == "" {
+                        let request = String::from_utf8_lossy(&buffer[..]).to_string();
+                        first_line = request.lines().next().unwrap().to_string();
+                    }
+                    if n < buffer.len() {
+                        break;
+                    }
+                },
+                Err(_) => {
+                    panic!("unable to read request");
+                }
+            }
+        }
 
-        let request = String::from_utf8_lossy(&buffer[..]).to_string();
-        let first_line = request.lines().next().unwrap();
         let result = parse_account_details(&first_line);
 
         let response = "HTTP/1.1 200 OK\r\n\r\n<!DOCTYPE html>
