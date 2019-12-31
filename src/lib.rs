@@ -1,11 +1,15 @@
 use chrono::Local;
 use hyper;
 use serde;
-use serde_json;
+use serde_json::json;
+use dirs;
+use std::fs::File;
+use std::fs::write;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
+use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -138,8 +142,28 @@ impl Project {
 
 impl Harvest {
     const CLIENT_ID: &'static str = "8ApPquiiqcpFrBt-GX7DhRDN";
+    const CONFIG_FILE_NAME: &'static str = "hfl_config.json";
 
     pub fn new() -> Harvest {
+        match Harvest::read_authorization_from_file() {
+            Some(harvest) => {
+                let unix_timestamp = SystemTime::now().duration_since(UNIX_EPOCH)
+                    .unwrap().as_secs();
+                let one_day = 60 * 60 * 24;
+
+                if harvest.expires_at < unix_timestamp + one_day {
+                     Harvest::obtain_new_authorization()
+                } else {
+                    return harvest;
+                }
+            },
+            None => {
+                 Harvest::obtain_new_authorization()
+            }
+        }
+    }
+
+    fn obtain_new_authorization() -> Harvest {
         let listener = TcpListener::bind("127.0.0.1:12345")
             .expect("port 12345 is already in use");
 
@@ -159,14 +183,38 @@ impl Harvest {
                 .unwrap().as_secs();
             let expires_in: u64 = result.2.parse().unwrap();
 
-            return Harvest {
+            let harvest = Harvest {
                 token: result.0,
                 account_id: result.1.parse().unwrap(),
                 expires_at: unix_timestamp + expires_in
             };
+            harvest.write_authorization_to_file();
+            return harvest;
         }
 
         panic!("unable to authorize");
+    }
+
+    fn read_authorization_from_file() -> Option<Harvest> {
+        match File::open(Harvest::config_file_path()) {
+            Ok(mut file) => {
+                let mut content = String::new();
+                file.read_to_string(&mut content).unwrap();
+                Some(serde_json::from_str(&content).unwrap())
+            },
+            Err(_) => { None }
+        }
+    }
+
+    fn write_authorization_to_file(&self) {
+        write(Harvest::config_file_path(), json!(self).to_string())
+            .expect("unable to save config file");
+    }
+
+    fn config_file_path() -> PathBuf {
+        let mut path = dirs::config_dir().unwrap();
+        path.push(Harvest::CONFIG_FILE_NAME);
+        path
     }
 
     fn authorize_callback(mut stream: TcpStream) -> (String, String, String) {
