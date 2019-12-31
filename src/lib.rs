@@ -7,12 +7,13 @@ use std::io::Write;
 use std::net::TcpListener;
 use std::net::TcpStream;
 use std::process::Command;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[derive(serde::Serialize, serde::Deserialize)]
 pub struct Harvest {
     token: String,
     account_id: u32,
-    expires_in: u32,
+    expires_at: u64,
 }
 
 #[derive(serde::Serialize, serde::Deserialize)]
@@ -154,10 +155,14 @@ impl Harvest {
             let stream = stream.unwrap();
             let result = Harvest::authorize_callback(stream);
 
+            let unix_timestamp = SystemTime::now().duration_since(UNIX_EPOCH)
+                .unwrap().as_secs();
+            let expires_in: u64 = result.2.parse().unwrap();
+
             return Harvest {
                 token: result.0,
                 account_id: result.1.parse().unwrap(),
-                expires_in: result.2.parse().unwrap(),
+                expires_at: unix_timestamp + expires_in
             };
         }
 
