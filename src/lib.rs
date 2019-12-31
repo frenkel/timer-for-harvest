@@ -160,11 +160,7 @@ impl Harvest {
             };
         }
 
-        Harvest {
-            token: "".to_string(),
-            account_id: 0,
-            expires_in: 0,
-        }
+        panic!("unable to authorize");
     }
 
     fn authorize_callback(mut stream: TcpStream) -> (String, String, String) {
