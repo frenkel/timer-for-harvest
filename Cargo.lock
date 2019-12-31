@@ -544,7 +544,7 @@ dependencies = [
 
 [[package]]
 name = "harvest"
-version = "0.1.6"
+version = "0.1.7"
 dependencies = [
  "chrono 0.4.9 (registry+https://github.com/rust-lang/crates.io-index)",
  "gdk 0.11.0 (registry+https://github.com/rust-lang/crates.io-index)",
