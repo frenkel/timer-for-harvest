@@ -13,6 +13,19 @@ pub struct Ui {
     time_entries: Rc<RefCell<Vec<TimeEntryRow>>>,
 }
 
+struct Popup {
+    window: gtk::Window,
+    button: gtk::Button,
+    project_chooser: gtk::ComboBox,
+    project_store: gtk::ListStore,
+    task_chooser: gtk::ComboBox,
+    task_store: gtk::ListStore,
+    hour_input: gtk::Entry,
+    notes_input: gtk::Entry,
+    timer: harvest::Timer,
+    project_assignments: Vec<harvest::ProjectAssignment>,
+}
+
 struct TimeEntryRow {
     time_entry: Rc<RefCell<harvest::TimeEntry>>,
     start_stop_button: gtk::Button,
@@ -38,6 +51,230 @@ pub fn main_window(harvest: Rc<Harvest>) {
     });
 
     application.run(&args().collect::<Vec<_>>());
+}
+
+impl Popup {
+    pub fn new(timer: harvest::Timer, mut project_assignments: Vec<harvest::ProjectAssignment>, main_window: gtk::ApplicationWindow) -> Popup {
+        let window = gtk::Window::new(gtk::WindowType::Toplevel);
+
+        window.set_title("Add time entry");
+        window.set_default_size(400, 200);
+        window.set_modal(true);
+        window.set_type_hint(gdk::WindowTypeHint::Dialog);
+
+        window.connect_delete_event(|_, _| Inhibit(false));
+        window.add_events(gdk::EventMask::KEY_PRESS_MASK);
+        window.connect_key_press_event(|window, event| {
+            if event.get_keyval() == gdk::enums::key::Escape {
+                window.close();
+                Inhibit(true)
+            } else {
+                Inhibit(false)
+            }
+        });
+
+        let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
+        project_assignments.sort_by(|a, b| {
+            a.project
+                .name
+                .to_lowercase()
+                .cmp(&b.project.name.to_lowercase())
+        });
+        for project_assignment in &project_assignments {
+            project_store.set(
+                &project_store.append(),
+                &[0, 1],
+                &[
+                    &project_assignment.project.name_and_code(),
+                    &project_assignment.project.id,
+                ],
+            );
+        }
+
+        let data = gtk::Box::new(gtk::Orientation::Vertical, 5);
+
+        let project_chooser = gtk::ComboBox::new_with_model_and_entry(&project_store);
+        project_chooser.set_entry_text_column(0);
+
+        let project_completer = gtk::EntryCompletion::new();
+        project_completer.set_model(Some(&project_store));
+        project_completer.set_text_column(0);
+        project_completer.set_match_func(Ui::fuzzy_matching);
+        let project_chooser_clone2 = project_chooser.clone();
+        project_completer.connect_match_selected(move |_completion, _model, iter| {
+            project_chooser_clone2.set_active_iter(Some(&iter));
+            Inhibit(false)
+        });
+
+        project_chooser
+            .get_child()
+            .unwrap()
+            .downcast::<gtk::Entry>()
+            .unwrap()
+            .set_completion(Some(&project_completer));
+        data.pack_start(&project_chooser, true, false, 0);
+
+        let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
+        let task_chooser = gtk::ComboBox::new_with_model_and_entry(&task_store);
+        task_chooser.set_entry_text_column(0);
+
+        let task_completer = gtk::EntryCompletion::new();
+        task_completer.set_model(Some(&task_store));
+        task_completer.set_text_column(0);
+        task_completer.set_match_func(Ui::fuzzy_matching);
+        let task_chooser_clone2 = task_chooser.clone();
+        task_completer.connect_match_selected(move |_completion, _model, iter| {
+            task_chooser_clone2.set_active_iter(Some(&iter));
+            Inhibit(false)
+        });
+
+        task_chooser
+            .get_child()
+            .unwrap()
+            .downcast::<gtk::Entry>()
+            .unwrap()
+            .set_completion(Some(&task_completer));
+        data.pack_start(&task_chooser, true, false, 0);
+
+        if timer.project_id > 0 {
+            /* TODO handle failure */
+            project_chooser.set_active_iter(Some(
+                &Ui::iter_from_id(&project_store, timer.project_id).unwrap(),
+            ));
+        }
+
+        let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+        let notes_input = gtk::Entry::new();
+        notes_input
+            .set_property("activates-default", &true)
+            .expect("could not allow default activation");
+        inputs.pack_start(&notes_input, true, true, 0);
+        match &timer.notes {
+            Some(n) => notes_input.set_text(&n),
+            None => {}
+        }
+
+        let hour_input = gtk::Entry::new();
+        hour_input
+            .set_property("activates-default", &true)
+            .expect("could not allow default activation");
+        inputs.pack_start(&hour_input, false, false, 0);
+        match timer.hours {
+            Some(h) => hour_input.set_text(&harvest::f32_to_duration_str(h)),
+            None => {}
+        }
+        hour_input.set_editable(!timer.is_running);
+
+        data.pack_start(&inputs, true, false, 0);
+
+        let start_button = gtk::Button::new();
+        start_button.set_can_default(true);
+        data.pack_start(&start_button, false, false, 0);
+
+        if timer.id == None {
+            start_button.set_label("Start Timer");
+        } else {
+            start_button.set_label("Save Timer");
+        }
+
+        window.add(&data);
+        start_button.grab_default();
+        main_window
+            .get_application()
+            .unwrap()
+            .add_window(&window);
+        window.set_transient_for(Some(&main_window));
+        window.show_all();
+        Popup {
+            window: window,
+            button: start_button,
+            project_chooser: project_chooser,
+            project_store: project_store,
+            task_chooser: task_chooser,
+            task_store: task_store,
+            hour_input: hour_input,
+            notes_input: notes_input,
+            timer: timer,
+            project_assignments: project_assignments
+        }
+    }
+    pub fn connect_signals(popup: &Rc<Popup>, ui: &Rc<Ui>) {
+        let popup_ref = Rc::clone(popup);
+        let api_ref = Rc::clone(&ui.api);
+        popup.button.connect_clicked(move |_| match popup_ref.project_chooser.get_active() {
+            Some(index) => match popup_ref.task_chooser.get_active() {
+                Some(task_index) => {
+                    let project_assignment = Ui::project_assignment_from_index(
+                        &popup_ref.project_store,
+                        index,
+                        &popup_ref.project_assignments,
+                    )
+                    .expect("project not found");
+                    let task = Ui::task_from_index(&popup_ref.task_store, task_index);
+
+                    if popup_ref.timer.id == None {
+                        api_ref.start_timer(
+                            &project_assignment.project,
+                            &task,
+                            &popup_ref.notes_input.get_text().unwrap(),
+                            harvest::duration_str_to_f32(&popup_ref.hour_input.get_text().unwrap()),
+                        );
+                    } else {
+                        api_ref.update_timer(&harvest::Timer {
+                            id: popup_ref.timer.id,
+                            project_id: project_assignment.project.id,
+                            task_id: task.id,
+                            notes: Some(popup_ref.notes_input.get_text().unwrap().to_string()),
+                            hours: Some(harvest::duration_str_to_f32(
+                                &popup_ref.hour_input.get_text().unwrap(),
+                            )),
+                            is_running: popup_ref.timer.is_running,
+                            spent_date: Some(popup_ref.timer.spent_date.as_ref().unwrap().to_string()),
+                        });
+                    }
+                    popup_ref.window.close();
+                }
+                None => {}
+            },
+            None => {}
+        });
+        let popup_ref2 = Rc::clone(popup);
+        let load_task = move |_project_chooser: &gtk::ComboBox| {
+            popup_ref2.task_store.clear();
+            match popup_ref2.project_chooser.get_active() {
+                Some(index) => {
+                    let project_assignment = Ui::project_assignment_from_index(
+                        &popup_ref2.project_store,
+                        index,
+                        &popup_ref2.project_assignments,
+                    );
+                    match project_assignment {
+                        Some(p) => {
+                            Ui::load_tasks(&popup_ref2.task_store, p);
+                            if popup_ref2.timer.task_id > 0 {
+                                /* when project_id changes, we might not have a task in the dropdown */
+                                popup_ref2.task_chooser.set_active_iter(
+                                    Ui::iter_from_id(&popup_ref2.task_store, popup_ref2.timer.task_id).as_ref(),
+                                );
+                            }
+                        }
+                        None => {}
+                    };
+                }
+                None => {}
+            }
+        };
+        /* trigger loading of task */
+        load_task(&popup.project_chooser);
+        popup.project_chooser.connect_changed(load_task);
+
+        let ui_ref = Rc::clone(&ui);
+        popup.window.connect_delete_event(move |_, _| {
+            ui_ref.load_time_entries();
+            Ui::connect_time_entry_signals(&ui_ref);
+            Inhibit(false)
+        });
+    }
 }
 
 impl Ui {
@@ -71,7 +308,7 @@ impl Ui {
         let key_press_event_ui_ref = Rc::clone(&ui);
         let button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
-            let popup = ui_ref.build_popup(harvest::Timer {
+            let popup = Popup::new(harvest::Timer {
                 id: None,
                 project_id: 0,
                 task_id: 0,
@@ -79,13 +316,8 @@ impl Ui {
                 notes: None,
                 hours: None,
                 is_running: false,
-            });
-            let delete_event_ref = Rc::clone(&ui_ref);
-            popup.connect_delete_event(move |_, _| {
-                delete_event_ref.load_time_entries();
-                Ui::connect_time_entry_signals(&delete_event_ref);
-                Inhibit(false)
-            });
+            }, ui_ref.api.active_project_assignments(), ui_ref.main_window.clone());
+            Popup::connect_signals(&Rc::new(popup), &ui_ref);
         };
 
         ui.main_window
@@ -168,7 +400,7 @@ impl Ui {
                     Some(n) => Some(n.to_string()),
                     None => None,
                 };
-                let popup = ui_ref2.build_popup(harvest::Timer {
+                let popup = Popup::new(harvest::Timer {
                     id: Some(time_entry_ref3.id),
                     project_id: time_entry_ref3.project.id,
                     task_id: time_entry_ref3.task.id,
@@ -176,13 +408,8 @@ impl Ui {
                     notes: notes,
                     hours: Some(time_entry_ref3.hours),
                     is_running: time_entry_ref3.is_running,
-                });
-                let delete_event_ui_ref = Rc::clone(&ui_ref2);
-                popup.connect_delete_event(move |_, _| {
-                    delete_event_ui_ref.load_time_entries();
-                    Ui::connect_time_entry_signals(&delete_event_ui_ref);
-                    Inhibit(false)
-                });
+                }, ui_ref2.api.active_project_assignments(), ui_ref2.main_window.clone());
+                Popup::connect_signals(&Rc::new(popup), &ui_ref2);
             });
         }
     }
@@ -272,227 +499,6 @@ impl Ui {
         }
         self.main_window.add(&rows);
         self.main_window.show_all();
-    }
-
-    fn build_popup(&self, timer: harvest::Timer) -> gtk::Window {
-        let popup = gtk::Window::new(gtk::WindowType::Toplevel);
-
-        popup.set_title("Add time entry");
-        popup.set_default_size(400, 200);
-        popup.set_modal(true);
-        popup.set_type_hint(gdk::WindowTypeHint::Dialog);
-
-        popup.connect_delete_event(|_, _| Inhibit(false));
-        popup.add_events(gdk::EventMask::KEY_PRESS_MASK);
-        popup.connect_key_press_event(|window, event| {
-            if event.get_keyval() == gdk::enums::key::Escape {
-                window.close();
-                Inhibit(true)
-            } else {
-                Inhibit(false)
-            }
-        });
-
-        let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
-        let mut project_assignments = self.api.active_project_assignments();
-        project_assignments.sort_by(|a, b| {
-            a.project
-                .name
-                .to_lowercase()
-                .cmp(&b.project.name.to_lowercase())
-        });
-        for project_assignment in &project_assignments {
-            project_store.set(
-                &project_store.append(),
-                &[0, 1],
-                &[
-                    &project_assignment.project.name_and_code(),
-                    &project_assignment.project.id,
-                ],
-            );
-        }
-        let project_assignments = Rc::new(project_assignments);
-
-        let data = gtk::Box::new(gtk::Orientation::Vertical, 5);
-
-        let project_chooser = gtk::ComboBox::new_with_model_and_entry(&project_store);
-        project_chooser.set_entry_text_column(0);
-
-        let project_completer = gtk::EntryCompletion::new();
-        project_completer.set_model(Some(&project_store));
-        project_completer.set_text_column(0);
-        project_completer.set_match_func(Ui::fuzzy_matching);
-        let project_chooser_clone2 = project_chooser.clone();
-        project_completer.connect_match_selected(move |_completion, _model, iter| {
-            project_chooser_clone2.set_active_iter(Some(&iter));
-            Inhibit(false)
-        });
-
-        project_chooser
-            .get_child()
-            .unwrap()
-            .downcast::<gtk::Entry>()
-            .unwrap()
-            .set_completion(Some(&project_completer));
-        data.pack_start(&project_chooser, true, false, 0);
-
-        let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
-        let task_chooser = gtk::ComboBox::new_with_model_and_entry(&task_store);
-        task_chooser.set_entry_text_column(0);
-
-        let task_completer = gtk::EntryCompletion::new();
-        task_completer.set_model(Some(&task_store));
-        task_completer.set_text_column(0);
-        task_completer.set_match_func(Ui::fuzzy_matching);
-        let task_chooser_clone2 = task_chooser.clone();
-        task_completer.connect_match_selected(move |_completion, _model, iter| {
-            task_chooser_clone2.set_active_iter(Some(&iter));
-            Inhibit(false)
-        });
-
-        task_chooser
-            .get_child()
-            .unwrap()
-            .downcast::<gtk::Entry>()
-            .unwrap()
-            .set_completion(Some(&task_completer));
-        data.pack_start(&task_chooser, true, false, 0);
-
-        let rc = Rc::new(timer);
-        let timer_clone = Rc::clone(&rc);
-
-        let task_store_clone = task_store.clone();
-        let project_chooser_clone = project_chooser.clone();
-        let project_store_clone = project_store.clone();
-        let task_chooser_clone = task_chooser.clone();
-        let project_assignments_ref = Rc::clone(&project_assignments);
-        project_chooser.connect_changed(move |_| {
-            task_store_clone.clear();
-            match project_chooser_clone.get_active() {
-                Some(index) => {
-                    let project_assignment = Ui::project_assignment_from_index(
-                        &project_store_clone,
-                        index,
-                        &project_assignments_ref,
-                    );
-                    match project_assignment {
-                        Some(p) => {
-                            Ui::load_tasks(&task_store_clone, p);
-                            if timer_clone.task_id > 0 {
-                                /* when project_id changes, we might not have a task in the dropdown */
-                                task_chooser_clone.set_active_iter(
-                                    Ui::iter_from_id(&task_store_clone, timer_clone.task_id).as_ref(),
-                                );
-                            }
-                        }
-                        None => {}
-                    };
-                }
-                None => {}
-            }
-        });
-        let timer_clone2 = Rc::clone(&rc);
-        if timer_clone2.project_id > 0 {
-            /* TODO handle failure */
-            project_chooser.set_active_iter(Some(
-                &Ui::iter_from_id(&project_store, timer_clone2.project_id).unwrap(),
-            ));
-        }
-
-        let inputs = gtk::Box::new(gtk::Orientation::Horizontal, 2);
-        let notes_input = gtk::Entry::new();
-        notes_input
-            .set_property("activates-default", &true)
-            .expect("could not allow default activation");
-        inputs.pack_start(&notes_input, true, true, 0);
-        match &timer_clone2.notes {
-            Some(n) => notes_input.set_text(&n),
-            None => {}
-        }
-
-        let hour_input = gtk::Entry::new();
-        hour_input
-            .set_property("activates-default", &true)
-            .expect("could not allow default activation");
-        inputs.pack_start(&hour_input, false, false, 0);
-        match timer_clone2.hours {
-            Some(h) => hour_input.set_text(&harvest::f32_to_duration_str(h)),
-            None => {}
-        }
-        hour_input.set_editable(!timer_clone2.is_running);
-
-        data.pack_start(&inputs, true, false, 0);
-
-        let start_button = gtk::Button::new();
-        start_button.set_can_default(true);
-        data.pack_start(&start_button, false, false, 0);
-
-        let project_chooser_clone2 = project_chooser.clone();
-        let task_chooser_clone2 = task_chooser.clone();
-        let project_store_clone2 = project_store.clone();
-        let task_store_clone2 = task_store.clone();
-        let popup_clone = popup.clone();
-        let project_assignments_ref2 = Rc::clone(&project_assignments);
-
-        let api_ref = Rc::clone(&self.api);
-        if timer_clone2.id == None {
-            start_button.set_label("Start Timer");
-        } else {
-            start_button.set_label("Save Timer");
-        }
-        start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
-            Some(index) => match task_chooser_clone2.get_active() {
-                Some(task_index) => {
-                    if timer_clone2.id == None {
-                        let project_assignment = Ui::project_assignment_from_index(
-                            &project_store_clone2,
-                            index,
-                            &project_assignments_ref2,
-                        )
-                        .expect("project not found");
-                        let task = Ui::task_from_index(&task_store_clone2, task_index);
-                        api_ref.start_timer(
-                            &project_assignment.project,
-                            &task,
-                            &notes_input.get_text().unwrap(),
-                            harvest::duration_str_to_f32(&hour_input.get_text().unwrap()),
-                        );
-                    } else {
-                        let project_assignment = Ui::project_assignment_from_index(
-                            &project_store_clone2,
-                            index,
-                            &project_assignments_ref2,
-                        )
-                        .expect("project not found");
-                        let task = Ui::task_from_index(&task_store_clone2, task_index);
-                        api_ref.update_timer(&harvest::Timer {
-                            id: timer_clone2.id,
-                            project_id: project_assignment.project.id,
-                            task_id: task.id,
-                            notes: Some(notes_input.get_text().unwrap().to_string()),
-                            hours: Some(harvest::duration_str_to_f32(
-                                &hour_input.get_text().unwrap(),
-                            )),
-                            is_running: timer_clone2.is_running,
-                            spent_date: Some(timer_clone2.spent_date.as_ref().unwrap().to_string()),
-                        });
-                    }
-                    popup_clone.close();
-                }
-                None => {}
-            },
-            None => {}
-        });
-
-        popup.add(&data);
-        start_button.grab_default();
-        self.main_window
-            .get_application()
-            .unwrap()
-            .add_window(&popup);
-        popup.set_transient_for(Some(&self.main_window));
-        popup.show_all();
-        popup
     }
 
     fn project_assignment_from_index<'a>(
