@@ -239,9 +239,9 @@ impl Popup {
             None => {}
         });
         let popup_ref2 = Rc::clone(popup);
-        let load_task = move |_project_chooser: &gtk::ComboBox| {
+        let load_task = move |project_chooser: &gtk::ComboBox| {
             popup_ref2.task_store.clear();
-            match popup_ref2.project_chooser.get_active() {
+            match project_chooser.get_active() {
                 Some(index) => {
                     let project_assignment = Ui::project_assignment_from_index(
                         &popup_ref2.project_store,
