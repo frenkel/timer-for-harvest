@@ -54,7 +54,11 @@ pub fn main_window(harvest: Rc<Harvest>) {
 }
 
 impl Popup {
-    pub fn new(timer: harvest::Timer, mut project_assignments: Vec<harvest::ProjectAssignment>, main_window: gtk::ApplicationWindow) -> Popup {
+    pub fn new(
+        timer: harvest::Timer,
+        mut project_assignments: Vec<harvest::ProjectAssignment>,
+        main_window: gtk::ApplicationWindow,
+    ) -> Popup {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
 
         window.set_title("Add time entry");
@@ -179,10 +183,7 @@ impl Popup {
 
         window.add(&data);
         start_button.grab_default();
-        main_window
-            .get_application()
-            .unwrap()
-            .add_window(&window);
+        main_window.get_application().unwrap().add_window(&window);
         window.set_transient_for(Some(&main_window));
         window.show_all();
         Popup {
@@ -195,49 +196,55 @@ impl Popup {
             hour_input: hour_input,
             notes_input: notes_input,
             timer: timer,
-            project_assignments: project_assignments
+            project_assignments: project_assignments,
         }
     }
     pub fn connect_signals(popup: &Rc<Popup>, ui: &Rc<Ui>) {
         let popup_ref = Rc::clone(popup);
         let api_ref = Rc::clone(&ui.api);
-        popup.button.connect_clicked(move |_| match popup_ref.project_chooser.get_active() {
-            Some(index) => match popup_ref.task_chooser.get_active() {
-                Some(task_index) => {
-                    let project_assignment = Ui::project_assignment_from_index(
-                        &popup_ref.project_store,
-                        index,
-                        &popup_ref.project_assignments,
-                    )
-                    .expect("project not found");
-                    let task = Ui::task_from_index(&popup_ref.task_store, task_index);
+        popup
+            .button
+            .connect_clicked(move |_| match popup_ref.project_chooser.get_active() {
+                Some(index) => match popup_ref.task_chooser.get_active() {
+                    Some(task_index) => {
+                        let project_assignment = Ui::project_assignment_from_index(
+                            &popup_ref.project_store,
+                            index,
+                            &popup_ref.project_assignments,
+                        )
+                        .expect("project not found");
+                        let task = Ui::task_from_index(&popup_ref.task_store, task_index);
 
-                    if popup_ref.timer.id == None {
-                        api_ref.start_timer(
-                            &project_assignment.project,
-                            &task,
-                            &popup_ref.notes_input.get_text().unwrap(),
-                            harvest::duration_str_to_f32(&popup_ref.hour_input.get_text().unwrap()),
-                        );
-                    } else {
-                        api_ref.update_timer(&harvest::Timer {
-                            id: popup_ref.timer.id,
-                            project_id: project_assignment.project.id,
-                            task_id: task.id,
-                            notes: Some(popup_ref.notes_input.get_text().unwrap().to_string()),
-                            hours: Some(harvest::duration_str_to_f32(
-                                &popup_ref.hour_input.get_text().unwrap(),
-                            )),
-                            is_running: popup_ref.timer.is_running,
-                            spent_date: Some(popup_ref.timer.spent_date.as_ref().unwrap().to_string()),
-                        });
+                        if popup_ref.timer.id == None {
+                            api_ref.start_timer(
+                                &project_assignment.project,
+                                &task,
+                                &popup_ref.notes_input.get_text().unwrap(),
+                                harvest::duration_str_to_f32(
+                                    &popup_ref.hour_input.get_text().unwrap(),
+                                ),
+                            );
+                        } else {
+                            api_ref.update_timer(&harvest::Timer {
+                                id: popup_ref.timer.id,
+                                project_id: project_assignment.project.id,
+                                task_id: task.id,
+                                notes: Some(popup_ref.notes_input.get_text().unwrap().to_string()),
+                                hours: Some(harvest::duration_str_to_f32(
+                                    &popup_ref.hour_input.get_text().unwrap(),
+                                )),
+                                is_running: popup_ref.timer.is_running,
+                                spent_date: Some(
+                                    popup_ref.timer.spent_date.as_ref().unwrap().to_string(),
+                                ),
+                            });
+                        }
+                        popup_ref.window.close();
                     }
-                    popup_ref.window.close();
-                }
+                    None => {}
+                },
                 None => {}
-            },
-            None => {}
-        });
+            });
         let popup_ref2 = Rc::clone(popup);
         let load_task = move |project_chooser: &gtk::ComboBox| {
             popup_ref2.task_store.clear();
@@ -254,7 +261,11 @@ impl Popup {
                             if popup_ref2.timer.task_id > 0 {
                                 /* when project_id changes, we might not have a task in the dropdown */
                                 popup_ref2.task_chooser.set_active_iter(
-                                    Ui::iter_from_id(&popup_ref2.task_store, popup_ref2.timer.task_id).as_ref(),
+                                    Ui::iter_from_id(
+                                        &popup_ref2.task_store,
+                                        popup_ref2.timer.task_id,
+                                    )
+                                    .as_ref(),
                                 );
                             }
                         }
@@ -308,15 +319,19 @@ impl Ui {
         let key_press_event_ui_ref = Rc::clone(&ui);
         let button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
-            let popup = Popup::new(harvest::Timer {
-                id: None,
-                project_id: 0,
-                task_id: 0,
-                spent_date: None,
-                notes: None,
-                hours: None,
-                is_running: false,
-            }, ui_ref.api.active_project_assignments(), ui_ref.main_window.clone());
+            let popup = Popup::new(
+                harvest::Timer {
+                    id: None,
+                    project_id: 0,
+                    task_id: 0,
+                    spent_date: None,
+                    notes: None,
+                    hours: None,
+                    is_running: false,
+                },
+                ui_ref.api.active_project_assignments(),
+                ui_ref.main_window.clone(),
+            );
             Popup::connect_signals(&Rc::new(popup), &ui_ref);
         };
 
@@ -400,15 +415,19 @@ impl Ui {
                     Some(n) => Some(n.to_string()),
                     None => None,
                 };
-                let popup = Popup::new(harvest::Timer {
-                    id: Some(time_entry_ref3.id),
-                    project_id: time_entry_ref3.project.id,
-                    task_id: time_entry_ref3.task.id,
-                    spent_date: Some(time_entry_ref3.spent_date.clone()),
-                    notes: notes,
-                    hours: Some(time_entry_ref3.hours),
-                    is_running: time_entry_ref3.is_running,
-                }, ui_ref2.api.active_project_assignments(), ui_ref2.main_window.clone());
+                let popup = Popup::new(
+                    harvest::Timer {
+                        id: Some(time_entry_ref3.id),
+                        project_id: time_entry_ref3.project.id,
+                        task_id: time_entry_ref3.task.id,
+                        spent_date: Some(time_entry_ref3.spent_date.clone()),
+                        notes: notes,
+                        hours: Some(time_entry_ref3.hours),
+                        is_running: time_entry_ref3.is_running,
+                    },
+                    ui_ref2.api.active_project_assignments(),
+                    ui_ref2.main_window.clone(),
+                );
                 Popup::connect_signals(&Rc::new(popup), &ui_ref2);
             });
         }

@@ -1,10 +1,10 @@
 use chrono::Local;
+use dirs;
 use hyper;
 use serde;
 use serde_json::json;
-use dirs;
-use std::fs::File;
 use std::fs::write;
+use std::fs::File;
 use std::io::Read;
 use std::io::Write;
 use std::net::TcpListener;
@@ -147,25 +147,24 @@ impl Harvest {
     pub fn new() -> Harvest {
         match Harvest::read_authorization_from_file() {
             Some(harvest) => {
-                let unix_timestamp = SystemTime::now().duration_since(UNIX_EPOCH)
-                    .unwrap().as_secs();
+                let unix_timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
                 let one_day = 60 * 60 * 24;
 
                 if harvest.expires_at < unix_timestamp + one_day {
-                     Harvest::obtain_new_authorization()
+                    Harvest::obtain_new_authorization()
                 } else {
                     return harvest;
                 }
-            },
-            None => {
-                 Harvest::obtain_new_authorization()
             }
+            None => Harvest::obtain_new_authorization(),
         }
     }
 
     fn obtain_new_authorization() -> Harvest {
-        let listener = TcpListener::bind("127.0.0.1:12345")
-            .expect("port 12345 is already in use");
+        let listener = TcpListener::bind("127.0.0.1:12345").expect("port 12345 is already in use");
 
         Command::new("xdg-open")
             .arg(format!(
@@ -179,14 +178,16 @@ impl Harvest {
             let stream = stream.unwrap();
             let result = Harvest::authorize_callback(stream);
 
-            let unix_timestamp = SystemTime::now().duration_since(UNIX_EPOCH)
-                .unwrap().as_secs();
+            let unix_timestamp = SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_secs();
             let expires_in: u64 = result.2.parse().unwrap();
 
             let harvest = Harvest {
                 token: result.0,
                 account_id: result.1.parse().unwrap(),
-                expires_at: unix_timestamp + expires_in
+                expires_at: unix_timestamp + expires_in,
             };
             harvest.write_authorization_to_file();
             return harvest;
@@ -201,8 +202,8 @@ impl Harvest {
                 let mut content = String::new();
                 file.read_to_string(&mut content).unwrap();
                 Some(serde_json::from_str(&content).unwrap())
-            },
-            Err(_) => { None }
+            }
+            Err(_) => None,
         }
     }
 
@@ -231,7 +232,7 @@ impl Harvest {
                     if n < buffer.len() {
                         break;
                     }
-                },
+                }
                 Err(_) => {
                     panic!("unable to read request");
                 }
