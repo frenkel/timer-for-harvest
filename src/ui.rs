@@ -437,9 +437,13 @@ impl Ui {
         let api_ref = Rc::clone(&self.api);
         if timer_clone2.id == None {
             start_button.set_label("Start Timer");
-            start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
-                Some(index) => match task_chooser_clone2.get_active() {
-                    Some(task_index) => {
+        } else {
+            start_button.set_label("Save Timer");
+        }
+        start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
+            Some(index) => match task_chooser_clone2.get_active() {
+                Some(task_index) => {
+                    if timer_clone2.id == None {
                         let project_assignment = Ui::project_assignment_from_index(
                             &project_store_clone2,
                             index,
@@ -453,17 +457,7 @@ impl Ui {
                             &notes_input.get_text().unwrap(),
                             harvest::duration_str_to_f32(&hour_input.get_text().unwrap()),
                         );
-                        popup_clone.close();
-                    }
-                    None => {}
-                },
-                None => {}
-            });
-        } else {
-            start_button.set_label("Save Timer");
-            start_button.connect_clicked(move |_| match project_chooser_clone2.get_active() {
-                Some(index) => match task_chooser_clone2.get_active() {
-                    Some(task_index) => {
+                    } else {
                         let project_assignment = Ui::project_assignment_from_index(
                             &project_store_clone2,
                             index,
@@ -482,13 +476,13 @@ impl Ui {
                             is_running: timer_clone2.is_running,
                             spent_date: Some(timer_clone2.spent_date.as_ref().unwrap().to_string()),
                         });
-                        popup_clone.close();
                     }
-                    None => {}
-                },
+                    popup_clone.close();
+                }
                 None => {}
-            });
-        }
+            },
+            None => {}
+        });
 
         popup.add(&data);
         start_button.grab_default();
