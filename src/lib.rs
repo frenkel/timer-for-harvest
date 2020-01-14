@@ -142,7 +142,7 @@ impl Project {
 
 impl Harvest {
     const CLIENT_ID: &'static str = "8ApPquiiqcpFrBt-GX7DhRDN";
-    const CONFIG_FILE_NAME: &'static str = "hfl_config.json";
+    const CONFIG_FILE_NAME: &'static str = "timer-for-harvest.json";
 
     pub fn new() -> Harvest {
         match Harvest::read_authorization_from_file() {

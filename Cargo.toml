@@ -5,7 +5,9 @@ homepage = "https://github.com/frenkel/timer-for-harvest"
 version = "0.1.9"
 authors = ["Frank Groeneveld <frank@frankgroeneveld.nl>"]
 edition = "2018"
+readme = "README.md"
 
+[package.metadata.deb]
 assets = [
     ["target/release/timer-for-harvest", "usr/bin/", "755"],
     ["assets/timer-for-harvest.desktop", "usr/share/applications/", "644"],
