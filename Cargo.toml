@@ -8,6 +8,8 @@ edition = "2018"
 readme = "README.md"
 
 [package.metadata.deb]
+extended-description = "Harvest client implemented using GTK+ and Rust."
+license-file = ["LICENSE", "3"]
 assets = [
     ["target/release/timer-for-harvest", "usr/bin/", "755"],
     ["assets/timer-for-harvest.desktop", "usr/share/applications/", "644"],
