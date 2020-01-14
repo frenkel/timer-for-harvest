@@ -254,7 +254,7 @@ impl Harvest {
         result
     }
 
-    fn user_agent() -> String {
+    pub fn user_agent() -> String {
         format!(
             "{} {}.{}.{}{} ({})",
             env!("CARGO_PKG_DESCRIPTION"),
