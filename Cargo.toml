@@ -6,6 +6,11 @@ version = "0.1.9"
 authors = ["Frank Groeneveld <frank@frankgroeneveld.nl>"]
 edition = "2018"
 
+assets = [
+    ["target/release/timer-for-harvest", "usr/bin/", "755"],
+    ["assets/timer-for-harvest.desktop", "usr/share/applications/", "644"],
+]
+
 [dependencies]
 reqwest = "0.9.18"
 serde = "1.0.99"
