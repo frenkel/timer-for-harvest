@@ -1,8 +1,8 @@
 [package]
-name = "harvest"
-description = "Harvest for Linux"
-homepage = "https://github.com/frenkel/hfl"
-version = "0.1.8"
+name = "timer-for-harvest"
+description = "Timer for Harvest"
+homepage = "https://github.com/frenkel/timer-for-harvest"
+version = "0.1.9"
 authors = ["Frank Groeneveld <frank@frankgroeneveld.nl>"]
 edition = "2018"
 

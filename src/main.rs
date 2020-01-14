@@ -1,5 +1,5 @@
 pub mod ui;
-use harvest::Harvest;
+use timer_for_harvest::Harvest;
 use std::rc::Rc;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {

@@ -1,6 +1,6 @@
 use gio::prelude::*;
 use gtk::prelude::*;
-use harvest::Harvest;
+use timer_for_harvest::*;
 use std::cell::RefCell;
 use std::convert::TryInto;
 use std::env::args;
@@ -22,12 +22,12 @@ struct Popup {
     task_store: gtk::ListStore,
     hour_input: gtk::Entry,
     notes_input: gtk::Entry,
-    timer: harvest::Timer,
-    project_assignments: Vec<harvest::ProjectAssignment>,
+    timer: Timer,
+    project_assignments: Vec<ProjectAssignment>,
 }
 
 struct TimeEntryRow {
-    time_entry: Rc<RefCell<harvest::TimeEntry>>,
+    time_entry: Rc<RefCell<TimeEntry>>,
     start_stop_button: gtk::Button,
     edit_button: gtk::Button,
     hours_label: gtk::Label,
@@ -55,8 +55,8 @@ pub fn main_window(harvest: Rc<Harvest>) {
 
 impl Popup {
     pub fn new(
-        timer: harvest::Timer,
-        mut project_assignments: Vec<harvest::ProjectAssignment>,
+        timer: Timer,
+        mut project_assignments: Vec<ProjectAssignment>,
         main_window: gtk::ApplicationWindow,
     ) -> Popup {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
@@ -164,7 +164,7 @@ impl Popup {
             .expect("could not allow default activation");
         inputs.pack_start(&hour_input, false, false, 0);
         match timer.hours {
-            Some(h) => hour_input.set_text(&harvest::f32_to_duration_str(h)),
+            Some(h) => hour_input.set_text(&f32_to_duration_str(h)),
             None => {}
         }
         hour_input.set_editable(!timer.is_running);
@@ -220,17 +220,17 @@ impl Popup {
                                 &project_assignment.project,
                                 &task,
                                 &popup_ref.notes_input.get_text().unwrap(),
-                                harvest::duration_str_to_f32(
+                                duration_str_to_f32(
                                     &popup_ref.hour_input.get_text().unwrap(),
                                 ),
                             );
                         } else {
-                            api_ref.update_timer(&harvest::Timer {
+                            api_ref.update_timer(&Timer {
                                 id: popup_ref.timer.id,
                                 project_id: project_assignment.project.id,
                                 task_id: task.id,
                                 notes: Some(popup_ref.notes_input.get_text().unwrap().to_string()),
-                                hours: Some(harvest::duration_str_to_f32(
+                                hours: Some(duration_str_to_f32(
                                     &popup_ref.hour_input.get_text().unwrap(),
                                 )),
                                 is_running: popup_ref.timer.is_running,
@@ -320,7 +320,7 @@ impl Ui {
         let button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
             let popup = Popup::new(
-                harvest::Timer {
+                Timer {
                     id: None,
                     project_id: 0,
                     task_id: 0,
@@ -374,7 +374,7 @@ impl Ui {
                         mut_time_entry_ref.hours += 1.0 / 60.0;
 
                         hours_label_ref
-                            .set_text(&harvest::f32_to_duration_str(mut_time_entry_ref.hours));
+                            .set_text(&f32_to_duration_str(mut_time_entry_ref.hours));
 
                         let mut total = 0.0;
                         for time_entry_row in time_entries_ref.borrow().iter() {
@@ -384,7 +384,7 @@ impl Ui {
                                 total += mut_time_entry_ref.hours;
                             }
                         }
-                        let title = format!("Harvest - {}", harvest::f32_to_duration_str(total));
+                        let title = format!("Harvest - {}", f32_to_duration_str(total));
                         header_bar_ref.set_title(Some(&title));
 
                         glib::Continue(true)
@@ -416,7 +416,7 @@ impl Ui {
                     None => None,
                 };
                 let popup = Popup::new(
-                    harvest::Timer {
+                    Timer {
                         id: Some(time_entry_ref3.id),
                         project_id: time_entry_ref3.project.id,
                         task_id: time_entry_ref3.task.id,
@@ -471,7 +471,7 @@ impl Ui {
             notes_label.set_line_wrap(true);
             data.pack_start(&notes_label, true, false, 0);
             row.pack_start(&data, true, true, 0);
-            let hours_label = left_aligned_label(&harvest::f32_to_duration_str(time_entry.hours));
+            let hours_label = left_aligned_label(&f32_to_duration_str(time_entry.hours));
             row.pack_start(&hours_label, false, false, 10);
             let button = gtk::Button::new();
             let rc = Rc::new(RefCell::new(time_entry));
@@ -500,7 +500,7 @@ impl Ui {
             });
         }
 
-        let title = format!("Harvest - {}", harvest::f32_to_duration_str(total_hours));
+        let title = format!("Harvest - {}", f32_to_duration_str(total_hours));
         self.main_window
             .get_titlebar()
             .unwrap()
@@ -523,8 +523,8 @@ impl Ui {
     fn project_assignment_from_index<'a>(
         store: &gtk::ListStore,
         index: u32,
-        project_assignments: &'a Vec<harvest::ProjectAssignment>,
-    ) -> Option<&'a harvest::ProjectAssignment> {
+        project_assignments: &'a Vec<ProjectAssignment>,
+    ) -> Option<&'a ProjectAssignment> {
         let iter = &store.get_iter_from_string(&format!("{}", index)).unwrap();
         let id = store.get_value(iter, 1).get::<u32>().unwrap();
         for project_assignment in project_assignments {
@@ -548,14 +548,14 @@ impl Ui {
         None
     }
 
-    fn task_from_index(store: &gtk::ListStore, index: u32) -> harvest::Task {
+    fn task_from_index(store: &gtk::ListStore, index: u32) -> Task {
         let iter = &store.get_iter_from_string(&format!("{}", index)).unwrap();
         let id = store.get_value(iter, 1).get::<u32>().unwrap();
         let name = store.get_value(iter, 0).get::<String>().unwrap();
-        harvest::Task { id: id, name: name }
+        Task { id: id, name: name }
     }
 
-    fn load_tasks(store: &gtk::ListStore, project_assignment: &harvest::ProjectAssignment) {
+    fn load_tasks(store: &gtk::ListStore, project_assignment: &ProjectAssignment) {
         for task_assignment in &project_assignment.task_assignments {
             store.set(
                 &store.append(),
