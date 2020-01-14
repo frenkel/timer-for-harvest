@@ -171,7 +171,7 @@ impl Harvest {
                 "https://id.getharvest.com/oauth2/authorize?client_id={}&response_type=token",
                 Harvest::CLIENT_ID
             ))
-            .output()
+            .spawn()
             .expect("Unable to open browser");
 
         for stream in listener.incoming() {
