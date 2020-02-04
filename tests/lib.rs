@@ -6,6 +6,7 @@ mod test {
         assert_eq!("0:01", timer_for_harvest::f32_to_duration_str(1.0 / 60.0));
         assert_eq!("0:05", timer_for_harvest::f32_to_duration_str(5.0 / 60.0));
         assert_eq!("0:10", timer_for_harvest::f32_to_duration_str(10.0 / 60.0));
+        assert_eq!("1:00", timer_for_harvest::f32_to_duration_str(59.9 / 60.0));
     }
 
     #[test]

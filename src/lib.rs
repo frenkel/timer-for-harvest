@@ -465,9 +465,13 @@ pub fn duration_str_to_f32(duration: &str) -> f32 {
 
 /* TODO move to TimeEntry */
 pub fn f32_to_duration_str(duration: f32) -> String {
-    let minutes = duration % 1.0;
-    let hours = duration - minutes;
+    let mut minutes = duration % 1.0;
+    let mut hours = duration - minutes;
 
+    if format!("{:0>2.0}", minutes * 60.0) == "60" {
+        minutes = 0.0;
+        hours += 1.0;
+    }
     format!("{:.0}:{:0>2.0}", hours, minutes * 60.0)
 }
 
