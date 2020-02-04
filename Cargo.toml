@@ -16,6 +16,15 @@ assets = [
     ["assets/timer-for-harvest.desktop", "usr/share/applications/", "644"],
 ]
 
+[package.metadata.rpm.cargo]
+buildflags = ["--release"]
+
+[package.metadata.rpm.targets]
+timer-for-harvest = { path = "/usr/bin/timer-for-harvest" }
+
+[package.metadata.rpm.files]
+"../assets/timer-for-harvest.desktop" = { path = "/usr/share/applications/timer-for-harvest.desktop" }
+
 [dependencies]
 reqwest = "0.9.18"
 serde = "1.0.99"
