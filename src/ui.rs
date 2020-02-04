@@ -11,6 +11,7 @@ pub struct Ui {
     api: Rc<Harvest>,
     start_button: gtk::Button,
     time_entries: Rc<RefCell<Vec<TimeEntryRow>>>,
+    project_assignments: Rc<RefCell<Vec<ProjectAssignment>>>,
 }
 
 struct Popup {
@@ -23,7 +24,6 @@ struct Popup {
     hour_input: gtk::Entry,
     notes_input: gtk::Entry,
     timer: Timer,
-    project_assignments: Vec<ProjectAssignment>,
 }
 
 struct TimeEntryRow {
@@ -56,7 +56,7 @@ pub fn main_window(harvest: Rc<Harvest>) {
 impl Popup {
     pub fn new(
         timer: Timer,
-        mut project_assignments: Vec<ProjectAssignment>,
+        project_assignments: Rc<RefCell<Vec<ProjectAssignment>>>,
         main_window: gtk::ApplicationWindow,
     ) -> Popup {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
@@ -78,13 +78,7 @@ impl Popup {
         });
 
         let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
-        project_assignments.sort_by(|a, b| {
-            a.project
-                .name
-                .to_lowercase()
-                .cmp(&b.project.name.to_lowercase())
-        });
-        for project_assignment in &project_assignments {
+        for project_assignment in project_assignments.borrow().iter() {
             project_store.set(
                 &project_store.append(),
                 &[0, 1],
@@ -196,49 +190,51 @@ impl Popup {
             hour_input: hour_input,
             notes_input: notes_input,
             timer: timer,
-            project_assignments: project_assignments,
         }
     }
     pub fn connect_signals(popup: &Rc<Popup>, ui: &Rc<Ui>) {
         let popup_ref = Rc::clone(popup);
         let api_ref = Rc::clone(&ui.api);
+        let project_assignments_ref = Rc::clone(&ui.project_assignments);
         popup
             .button
             .connect_clicked(move |_| match popup_ref.project_chooser.get_active() {
                 Some(index) => match popup_ref.task_chooser.get_active() {
                     Some(task_index) => {
-                        let project_assignment = Ui::project_assignment_from_index(
-                            &popup_ref.project_store,
-                            index,
-                            &popup_ref.project_assignments,
-                        )
-                        .expect("project not found");
+                        let iter = &popup_ref.project_store.get_iter_from_string(&format!("{}", index)).unwrap();
+                        let id = popup_ref.project_store.get_value(iter, 1).get::<u32>().unwrap();
                         let task = Ui::task_from_index(&popup_ref.task_store, task_index);
 
-                        if popup_ref.timer.id == None {
-                            api_ref.start_timer(
-                                &project_assignment.project,
-                                &task,
-                                &popup_ref.notes_input.get_text().unwrap(),
-                                duration_str_to_f32(
-                                    &popup_ref.hour_input.get_text().unwrap(),
-                                ),
-                            );
-                        } else {
-                            api_ref.update_timer(&Timer {
-                                id: popup_ref.timer.id,
-                                project_id: project_assignment.project.id,
-                                task_id: task.id,
-                                notes: Some(popup_ref.notes_input.get_text().unwrap().to_string()),
-                                hours: Some(duration_str_to_f32(
-                                    &popup_ref.hour_input.get_text().unwrap(),
-                                )),
-                                is_running: popup_ref.timer.is_running,
-                                spent_date: Some(
-                                    popup_ref.timer.spent_date.as_ref().unwrap().to_string(),
-                                ),
-                            });
+                        for project_assignment in project_assignments_ref.borrow().iter() {
+                            if project_assignment.project.id == id {
+                                if popup_ref.timer.id == None {
+                                    api_ref.start_timer(
+                                        &project_assignment.project,
+                                        &task,
+                                        &popup_ref.notes_input.get_text().unwrap(),
+                                        duration_str_to_f32(
+                                            &popup_ref.hour_input.get_text().unwrap(),
+                                        ),
+                                    );
+                                } else {
+                                    api_ref.update_timer(&Timer {
+                                        id: popup_ref.timer.id,
+                                        project_id: project_assignment.project.id,
+                                        task_id: task.id,
+                                        notes: Some(popup_ref.notes_input.get_text().unwrap().to_string()),
+                                        hours: Some(duration_str_to_f32(
+                                            &popup_ref.hour_input.get_text().unwrap(),
+                                        )),
+                                        is_running: popup_ref.timer.is_running,
+                                        spent_date: Some(
+                                            popup_ref.timer.spent_date.as_ref().unwrap().to_string(),
+                                        ),
+                                    });
+                                }
+                            }
                         }
+
+
                         popup_ref.window.close();
                     }
                     None => {}
@@ -246,18 +242,17 @@ impl Popup {
                 None => {}
             });
         let popup_ref2 = Rc::clone(popup);
+        let project_assignments_ref2 = Rc::clone(&ui.project_assignments);
         let load_task = move |project_chooser: &gtk::ComboBox| {
             popup_ref2.task_store.clear();
             match project_chooser.get_active() {
                 Some(index) => {
-                    let project_assignment = Ui::project_assignment_from_index(
-                        &popup_ref2.project_store,
-                        index,
-                        &popup_ref2.project_assignments,
-                    );
-                    match project_assignment {
-                        Some(p) => {
-                            Ui::load_tasks(&popup_ref2.task_store, p);
+                    let iter = &popup_ref2.project_store.get_iter_from_string(&format!("{}", index)).unwrap();
+                    let id = popup_ref2.project_store.get_value(iter, 1).get::<u32>().unwrap();
+
+                    for project_assignment in project_assignments_ref2.borrow().iter() {
+                        if project_assignment.project.id == id {
+                            Ui::load_tasks(&popup_ref2.task_store, &project_assignment);
                             if popup_ref2.timer.task_id > 0 {
                                 /* when project_id changes, we might not have a task in the dropdown */
                                 popup_ref2.task_chooser.set_active_iter(
@@ -268,9 +263,9 @@ impl Popup {
                                     .as_ref(),
                                 );
                             }
+                            break;
                         }
-                        None => {}
-                    };
+                    }
                 }
                 None => {}
             }
@@ -307,11 +302,20 @@ impl Ui {
         let button = gtk::Button::new_with_label("Start");
         container.pack_start(&button);
 
+        let mut project_assignments = harvest.active_project_assignments();
+        project_assignments.sort_by(|a, b| {
+            a.project
+                .name
+                .to_lowercase()
+                .cmp(&b.project.name.to_lowercase())
+        });
+
         Ui {
             main_window: window,
             api: harvest,
             start_button: button,
             time_entries: Rc::new(RefCell::new(vec![])),
+            project_assignments: Rc::new(RefCell::new(project_assignments)),
         }
     }
 
@@ -319,6 +323,7 @@ impl Ui {
         let key_press_event_ui_ref = Rc::clone(&ui);
         let button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
+            let project_assignments_ref = Rc::clone(&ui_ref.project_assignments);
             let popup = Popup::new(
                 Timer {
                     id: None,
@@ -329,7 +334,7 @@ impl Ui {
                     hours: None,
                     is_running: false,
                 },
-                ui_ref.api.active_project_assignments(),
+                project_assignments_ref,
                 ui_ref.main_window.clone(),
             );
             Popup::connect_signals(&Rc::new(popup), &ui_ref);
@@ -410,6 +415,7 @@ impl Ui {
             let ui_ref2 = Rc::clone(&ui);
             let time_entry_ref2 = Rc::clone(&time_entry_row.time_entry);
             time_entry_row.edit_button.connect_clicked(move |_| {
+                let project_assignments_ref = Rc::clone(&ui_ref2.project_assignments);
                 let time_entry_ref3 = time_entry_ref2.borrow();
                 let notes = match time_entry_ref3.notes.as_ref() {
                     Some(n) => Some(n.to_string()),
@@ -425,7 +431,7 @@ impl Ui {
                         hours: Some(time_entry_ref3.hours),
                         is_running: time_entry_ref3.is_running,
                     },
-                    ui_ref2.api.active_project_assignments(),
+                    project_assignments_ref,
                     ui_ref2.main_window.clone(),
                 );
                 Popup::connect_signals(&Rc::new(popup), &ui_ref2);
@@ -442,8 +448,7 @@ impl Ui {
             time_entries.len().try_into().unwrap(),
         );
 
-        /* stop all running gtk timers */
-        for old_entry in self.time_entries.borrow().iter() {
+        /* stop all running gtk timers */ for old_entry in self.time_entries.borrow().iter() {
             old_entry.time_entry.borrow_mut().is_running = false;
         }
         /* clear old entries */
@@ -518,21 +523,6 @@ impl Ui {
         }
         self.main_window.add(&rows);
         self.main_window.show_all();
-    }
-
-    fn project_assignment_from_index<'a>(
-        store: &gtk::ListStore,
-        index: u32,
-        project_assignments: &'a Vec<ProjectAssignment>,
-    ) -> Option<&'a ProjectAssignment> {
-        let iter = &store.get_iter_from_string(&format!("{}", index)).unwrap();
-        let id = store.get_value(iter, 1).get::<u32>().unwrap();
-        for project_assignment in project_assignments {
-            if project_assignment.project.id == id {
-                return Some(project_assignment);
-            }
-        }
-        None
     }
 
     fn iter_from_id(store: &gtk::ListStore, id: u32) -> Option<gtk::TreeIter> {
