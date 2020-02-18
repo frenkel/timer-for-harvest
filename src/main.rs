@@ -1,7 +1,9 @@
+pub mod popup;
 pub mod ui;
-use timer_for_harvest::Harvest;
+
 use std::env::args;
 use std::rc::Rc;
+use timer_for_harvest::Harvest;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = args().collect();
