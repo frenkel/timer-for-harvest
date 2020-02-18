@@ -465,6 +465,7 @@ impl Ui {
                 &time_entry.client.name
             );
             let project_label = left_aligned_label(&project_client);
+            project_label.set_line_wrap(true);
             project_label.set_use_markup(true);
             data.pack_start(&project_label, true, false, 0);
             let notes = match time_entry.notes.as_ref() {
