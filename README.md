@@ -4,8 +4,8 @@ Harvest client implemented using GTK and Rust for Linux and the various BSD's.
 ## Installation
 On the Timer for Harvest github page, click on the releases link. The newest
 release is listed at the top of the page. It contains pre-build binaries for
-Ubuntu 19.10 and Fedora 31. Note that installing these will not keep you 
-up-to-date with the releases, because currently we don't provide package
+Ubuntu 19.10 and Fedora 31. Note that installing these **will not keep you 
+up-to-date** with the releases, because currently we don't provide package
 repositories.
 
 ## Usage
@@ -21,10 +21,10 @@ application will start now and should appear within 30 seconds.
 ### Daily usage
 The application currently connects to Harvest in a synchronous way. This means
 that the interface will wait for the Harvest servers to answer its requests.
-When you start the application it might therefor take some time for the window
-to appear. This is normal behaviour for now. In the future we hope to improve
-this experience by either providing a splash screen or doing this work in the
-background.
+**When you start the application it might therefor take several seconds for the
+window to appear.** This is normal behaviour for now. In the future we hope to
+improve this experience by either providing a splash screen or doing this work
+in the background.
 
 ## Security
 Username and password details are never seen by Timer for Harvest. A web
