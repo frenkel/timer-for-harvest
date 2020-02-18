@@ -1,10 +1,12 @@
 # Timer for Harvest
-Harvest client implemented using GTK and Rust for Linux and the various BSD's.
+[Harvest](https://www.getharvest.com/) client implemented using
+[GTK](https://www.gtk.org/) and [Rust](https://www.rust-lang.org/) for Linux
+and the various BSD's.
 
 ## Screenshots
 
-![Main window](/assets/main-window.png?raw=true "The Main Window")
-![Popup](/assets/popup.png?raw=true "The Time Entry Popup")
+![Main window](/assets/main-window.png?raw=true "The main window")
+![Popup](/assets/popup.png?raw=true "The time entry popup")
 
 ## Installation
 On the Timer for Harvest github page, click on the releases link. The newest
@@ -37,7 +39,7 @@ Just like the Harvest web interface there are some handy keyboard shortcuts:
   Timer for Harvest still shows the old state.
 - **N** in the main window opens the new time entry popup.
 - **Esc** closes the time entry popup.
-- **Enter** clicks the save time entry button in the time entry popup.
+- **Enter** activates the "Save Timer" button in the time entry popup.
 
 ## Security
 Username and password details are never seen by Timer for Harvest. A web
