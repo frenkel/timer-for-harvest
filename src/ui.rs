@@ -55,7 +55,8 @@ impl Ui {
         window.set_titlebar(Some(&container));
         window.set_border_width(10);
         window.set_position(gtk::WindowPosition::Center);
-        window.set_default_size(350, 70);
+        window.set_default_size(500, 300);
+        window.set_size_request(500, 300);
 
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
 
@@ -218,7 +219,7 @@ impl Ui {
             total_hours += time_entry.hours;
 
             let row = gtk::Box::new(gtk::Orientation::Horizontal, 4);
-            let data = gtk::Box::new(gtk::Orientation::Vertical, 3);
+            let data = gtk::Box::new(gtk::Orientation::Vertical, 2);
             let project_client = format!(
                 "<b>{}</b> ({})",
                 &time_entry.project.name_and_code(),
@@ -248,16 +249,16 @@ impl Ui {
             } else {
                 button.set_label("Start");
             };
-            let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 1);
+            let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 0);
             prevent_vexpand.set_valign(gtk::Align::Center);
             prevent_vexpand.pack_start(&button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
             let edit_button = gtk::Button::new_with_label("Edit");
-            let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 1);
+            let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 0);
             prevent_vexpand.set_valign(gtk::Align::Center);
             prevent_vexpand.pack_start(&edit_button, false, false, 0);
             row.pack_start(&prevent_vexpand, false, false, 0);
-            rows.pack_end(&row, true, false, 5);
+            rows.pack_end(&row, true, false, 0);
             self.time_entries.borrow_mut().push(TimeEntryRow {
                 time_entry: rc,
                 start_stop_button: button,

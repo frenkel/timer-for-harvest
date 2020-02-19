@@ -29,6 +29,7 @@ impl Popup {
         window.set_default_size(400, 200);
         window.set_modal(true);
         window.set_type_hint(gdk::WindowTypeHint::Dialog);
+        window.set_border_width(10);
 
         window.connect_delete_event(|_, _| Inhibit(false));
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
