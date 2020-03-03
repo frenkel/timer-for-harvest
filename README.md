@@ -57,7 +57,6 @@ token to a more secure location, such as GNOME Seahorse.
 - Switch to asynchronous communication with the Harvest server.
 - Idle detection to ask user whether idle time should be subtracted or booked
   as a new time entry.
-- Ability to remove time entries from within Timer for Harvest.
 - Ability to see other days then today.
 - Authentication token storage in GNOME Seahorse.
 - Support for newlines in the notes entry field. This appears to only be

@@ -392,6 +392,17 @@ impl Harvest {
         }
     }
 
+    pub fn delete_timer(&self, timer: &Timer) -> TimeEntry {
+        let url = format!(
+            "https://api.harvestapp.com/v2/time_entries/{}",
+            timer.id.unwrap()
+        );
+
+        let mut res = self.api_delete_request(&url);
+        let body = &res.text().unwrap();
+        serde_json::from_str(body).unwrap()
+    }
+
     fn api_get_request(&self, url: &str) -> reqwest::Response {
         let client = reqwest::Client::new();
 
@@ -414,6 +425,18 @@ impl Harvest {
         client
             .post(url)
             .json(&json)
+            .header("Authorization", format!("Bearer {}", self.token))
+            .header("Harvest-Account-Id", format!("{}", self.account_id))
+            .header("User-Agent", Harvest::user_agent())
+            .send()
+            .unwrap()
+    }
+
+    fn api_delete_request(&self, url: &str) -> reqwest::Response {
+        let client = reqwest::Client::new();
+
+        client
+            .delete(url)
             .header("Authorization", format!("Bearer {}", self.token))
             .header("Harvest-Account-Id", format!("{}", self.account_id))
             .header("User-Agent", Harvest::user_agent())

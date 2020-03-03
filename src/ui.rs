@@ -30,8 +30,11 @@ fn left_aligned_label(text: &str) -> gtk::Label {
 }
 
 pub fn main_window(harvest: Rc<Harvest>) {
-    let application =
-        gtk::Application::new(Some("nl.frankgroeneveld.harvest"), Default::default()).unwrap();
+    let application = gtk::Application::new(
+        Some("nl.frankgroeneveld.timer-for-harvest"),
+        Default::default(),
+    )
+    .unwrap();
 
     application.connect_activate(move |app| {
         let ui = Rc::new(Ui::new(Rc::clone(&harvest), app));

@@ -7,7 +7,8 @@ use timer_for_harvest::*;
 
 pub struct Popup {
     window: gtk::Window,
-    button: gtk::Button,
+    save_button: gtk::Button,
+    delete_button: gtk::Button,
     project_chooser: gtk::ComboBox,
     project_store: gtk::ListStore,
     task_chooser: gtk::ComboBox,
@@ -130,24 +131,35 @@ impl Popup {
 
         data.pack_start(&inputs, true, false, 0);
 
-        let start_button = gtk::Button::new();
-        start_button.set_can_default(true);
-        data.pack_start(&start_button, false, false, 0);
+        let buttons = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+
+        let delete_button = gtk::Button::new();
+        delete_button.set_label("Delete");
+        delete_button.set_sensitive(timer.id != None);
+        buttons.pack_start(&delete_button, true, false, 0);
+
+        let save_button = gtk::Button::new();
+        save_button.set_can_default(true);
+        buttons.pack_end(&save_button, true, false, 0);
+
+        /* TODO fix alignment of buttons, float left & right */
+        data.pack_start(&buttons, true, false, 0);
 
         if timer.id == None {
-            start_button.set_label("Start Timer");
+            save_button.set_label("Start Timer");
         } else {
-            start_button.set_label("Save Timer");
+            save_button.set_label("Save Timer");
         }
 
         window.add(&data);
-        start_button.grab_default();
+        save_button.grab_default();
         main_window.get_application().unwrap().add_window(&window);
         window.set_transient_for(Some(&main_window));
         window.show_all();
         Popup {
             window: window,
-            button: start_button,
+            save_button: save_button,
+            delete_button: delete_button,
             project_chooser: project_chooser,
             project_store: project_store,
             task_chooser: task_chooser,
@@ -162,7 +174,7 @@ impl Popup {
         let api_ref = Rc::clone(&ui.api);
         let project_assignments_ref = Rc::clone(&ui.project_assignments);
         popup
-            .button
+            .save_button
             .connect_clicked(move |_| match popup_ref.project_chooser.get_active() {
                 Some(index) => match popup_ref.task_chooser.get_active() {
                     Some(task_index) => {
@@ -264,6 +276,13 @@ impl Popup {
             ui_ref.load_time_entries();
             Ui::connect_time_entry_signals(&ui_ref);
             Inhibit(false)
+        });
+
+        let api_ref2 = Rc::clone(&ui.api);
+        let popup_ref2 = Rc::clone(&popup);
+        popup.delete_button.connect_clicked(move |_| {
+            api_ref2.delete_timer(&popup_ref2.timer);
+            popup_ref2.window.close();
         });
     }
 
