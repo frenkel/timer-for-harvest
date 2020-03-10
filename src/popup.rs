@@ -1,8 +1,10 @@
+use crate::ui;
 use crate::ui::Ui;
 
 use gtk::prelude::*;
 use std::cell::RefCell;
 use std::rc::Rc;
+use std::sync::mpsc;
 use timer_for_harvest::*;
 
 pub struct Popup {
@@ -16,6 +18,7 @@ pub struct Popup {
     hour_input: gtk::Entry,
     notes_input: gtk::Entry,
     timer: Timer,
+    to_background: mpsc::Sender<ui::Event>,
 }
 
 impl Popup {
@@ -23,6 +26,7 @@ impl Popup {
         timer: Timer,
         project_assignments: Rc<RefCell<Vec<ProjectAssignment>>>,
         main_window: gtk::ApplicationWindow,
+        to_background: mpsc::Sender<ui::Event>,
     ) -> Popup {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
 
@@ -167,22 +171,23 @@ impl Popup {
             hour_input: hour_input,
             notes_input: notes_input,
             timer: timer,
+            to_background: to_background,
         }
     }
     pub fn connect_signals(popup: &Rc<Popup>, ui: &Rc<Ui>) {
         let popup_ref = Rc::clone(popup);
-        let api_ref = Rc::clone(&ui.api);
         let project_assignments_ref = Rc::clone(&ui.project_assignments);
-        popup
-            .save_button
-            .connect_clicked(move |_| match popup_ref.project_chooser.get_active() {
+        let to_background = popup.to_background.clone();
+        popup.save_button.connect_clicked(move |button| {
+            button.set_sensitive(false);
+            match popup_ref.project_chooser.get_active() {
                 Some(index) => match popup_ref.task_chooser.get_active() {
                     Some(task_index) => {
                         let iter = &popup_ref
                             .project_store
                             .get_iter_from_string(&format!("{}", index))
                             .unwrap();
-                        let id = popup_ref
+                        let project_id = popup_ref
                             .project_store
                             .get_value(iter, 1)
                             .get::<u32>()
@@ -190,37 +195,37 @@ impl Popup {
                         let task = Popup::task_from_index(&popup_ref.task_store, task_index);
 
                         for project_assignment in project_assignments_ref.borrow().iter() {
-                            if project_assignment.project.id == id {
+                            if project_assignment.project.id == project_id {
                                 if popup_ref.timer.id == None {
-                                    api_ref.start_timer(
-                                        &project_assignment.project,
-                                        &task,
-                                        &popup_ref.notes_input.get_text().unwrap(),
-                                        duration_str_to_f32(
-                                            &popup_ref.hour_input.get_text().unwrap(),
-                                        ),
-                                    );
-                                } else {
-                                    api_ref.update_timer(&Timer {
-                                        id: popup_ref.timer.id,
-                                        project_id: project_assignment.project.id,
-                                        task_id: task.id,
-                                        notes: Some(
+                                    to_background
+                                        .send(ui::Event::StartTimer(
+                                            project_id,
+                                            task.id,
                                             popup_ref.notes_input.get_text().unwrap().to_string(),
-                                        ),
-                                        hours: Some(duration_str_to_f32(
-                                            &popup_ref.hour_input.get_text().unwrap(),
-                                        )),
-                                        is_running: popup_ref.timer.is_running,
-                                        spent_date: Some(
+                                            duration_str_to_f32(
+                                                &popup_ref.hour_input.get_text().unwrap(),
+                                            ),
+                                        ))
+                                        .expect("Sending message to background thread");
+                                } else {
+                                    to_background
+                                        .send(ui::Event::UpdateTimer(
+                                            popup_ref.timer.id.unwrap(),
+                                            project_id,
+                                            task.id,
+                                            popup_ref.notes_input.get_text().unwrap().to_string(),
+                                            duration_str_to_f32(
+                                                &popup_ref.hour_input.get_text().unwrap(),
+                                            ),
+                                            popup_ref.timer.is_running,
                                             popup_ref
                                                 .timer
                                                 .spent_date
                                                 .as_ref()
                                                 .unwrap()
                                                 .to_string(),
-                                        ),
-                                    });
+                                        ))
+                                        .expect("Sending message to background thread");
                                 }
                             }
                         }
@@ -230,7 +235,8 @@ impl Popup {
                     None => {}
                 },
                 None => {}
-            });
+            }
+        });
         let popup_ref2 = Rc::clone(popup);
         let project_assignments_ref2 = Rc::clone(&ui.project_assignments);
         let load_task = move |project_chooser: &gtk::ComboBox| {
@@ -271,17 +277,13 @@ impl Popup {
         load_task(&popup.project_chooser);
         popup.project_chooser.connect_changed(load_task);
 
-        let ui_ref = Rc::clone(&ui);
-        popup.window.connect_delete_event(move |_, _| {
-            ui_ref.load_time_entries();
-            Ui::connect_time_entry_signals(&ui_ref);
-            Inhibit(false)
-        });
-
-        let api_ref2 = Rc::clone(&ui.api);
         let popup_ref2 = Rc::clone(&popup);
-        popup.delete_button.connect_clicked(move |_| {
-            api_ref2.delete_timer(&popup_ref2.timer);
+        let to_background3 = popup.to_background.clone();
+        popup.delete_button.connect_clicked(move |button| {
+            button.set_sensitive(false);
+            to_background3
+                .send(ui::Event::DeleteTimer(popup_ref2.timer.id.unwrap()))
+                .expect("Sending message to background thread");
             popup_ref2.window.close();
         });
     }
