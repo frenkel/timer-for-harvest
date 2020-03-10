@@ -23,16 +23,9 @@ application when you type "Timer for Harvest" in the activity searcher.
 Upon first launch you will first see a web browser start. This will open an
 authorization flow from Harvest. When you've completed these steps you will
 end up on a white page with the text "Authorized successfully." The actual
-application will start now and should appear within 30 seconds.
+application will start now.
 
 ### Daily usage
-The application currently connects to Harvest in a synchronous way. This means
-that the interface will wait for the Harvest servers to answer its requests.
-**When you start the application it might therefor take several seconds for the
-window to appear.** This is normal behaviour for now. In the future we hope to
-improve this experience by either providing a splash screen or doing this work
-in the background.
-
 Just like the Harvest web interface there are some handy keyboard shortcuts:
 - **F5** in the main window will refresh the time entries list. This can be
   usefull when you updated the entries using a different interface and
@@ -53,8 +46,6 @@ $XDG\_CONFIG\_HOME/timer-for-harvest.json. In the future we hope to move this
 token to a more secure location, such as GNOME Seahorse.
 
 ## Wishlist
-- Show a splashscreen while initially connecting to Harvest.
-- Switch to asynchronous communication with the Harvest server.
 - Idle detection to ask user whether idle time should be subtracted or booked
   as a new time entry.
 - Ability to see other days then today.
