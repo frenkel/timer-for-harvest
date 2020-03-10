@@ -1,8 +1,8 @@
+pub mod background;
 pub mod popup;
 pub mod ui;
 
 use std::env::args;
-use std::rc::Rc;
 use timer_for_harvest::Harvest;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -11,8 +11,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     if args.len() == 2 && &args[1] == "--version" {
         println!("{}", Harvest::user_agent());
     } else {
-        let harvest = Rc::new(Harvest::new());
-        ui::main_window(harvest);
+        ui::main_window();
     }
 
     Ok(())

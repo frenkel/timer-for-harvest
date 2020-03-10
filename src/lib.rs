@@ -313,19 +313,13 @@ impl Harvest {
         serde_json::from_str(body).unwrap()
     }
 
-    pub fn start_timer(
-        &self,
-        project: &Project,
-        task: &Task,
-        notes: &str,
-        hours: f32,
-    ) -> TimeEntry {
+    pub fn start_timer(&self, project_id: u32, task_id: u32, notes: &str, hours: f32) -> TimeEntry {
         let url = "https://api.harvestapp.com/v2/time_entries";
         let now = Local::now().format("%Y-%m-%d");
         let mut timer = Timer {
             id: None,
-            project_id: project.id,
-            task_id: task.id,
+            project_id: project_id,
+            task_id: task_id,
             spent_date: Some(now.to_string()),
             notes: None,
             hours: None,
@@ -343,10 +337,10 @@ impl Harvest {
         serde_json::from_str(body).unwrap()
     }
 
-    pub fn restart_timer(&self, time_entry: &TimeEntry) -> TimeEntry {
+    pub fn restart_timer(&self, time_entry_id: u32) -> TimeEntry {
         let url = format!(
             "https://api.harvestapp.com/v2/time_entries/{}/restart",
-            time_entry.id
+            time_entry_id
         );
 
         let mut res = self.api_patch_request(&url, &());
@@ -354,10 +348,10 @@ impl Harvest {
         serde_json::from_str(body).unwrap()
     }
 
-    pub fn stop_timer(&self, time_entry: &TimeEntry) -> TimeEntry {
+    pub fn stop_timer(&self, time_entry_id: u32) -> TimeEntry {
         let url = format!(
             "https://api.harvestapp.com/v2/time_entries/{}/stop",
-            time_entry.id
+            time_entry_id
         );
 
         let mut res = self.api_patch_request(&url, &());
@@ -365,38 +359,50 @@ impl Harvest {
         serde_json::from_str(body).unwrap()
     }
 
-    pub fn update_timer(&self, timer: &Timer) -> TimeEntry {
-        let url = format!(
-            "https://api.harvestapp.com/v2/time_entries/{}",
-            timer.id.unwrap()
-        );
+    pub fn update_timer(
+        &self,
+        id: u32,
+        project_id: u32,
+        task_id: u32,
+        notes: String,
+        hours: f32,
+        is_running: bool,
+        spent_date: String,
+    ) -> TimeEntry {
+        let url = format!("https://api.harvestapp.com/v2/time_entries/{}", id);
 
         /* TODO how not to sent hours when is_running in a better way? */
-        if timer.is_running {
+        if is_running {
             let t2 = TimerWithoutHours {
-                id: timer.id,
-                project_id: timer.project_id,
-                task_id: timer.task_id,
-                notes: Some(timer.notes.as_ref().unwrap().to_string()),
-                is_running: true,
-                spent_date: Some(timer.spent_date.as_ref().unwrap().to_string()),
+                id: Some(id),
+                project_id: project_id,
+                task_id: task_id,
+                notes: Some(notes),
+                is_running: is_running,
+                spent_date: Some(spent_date),
             };
 
             let mut res = self.api_patch_request(&url, &t2);
             let body = &res.text().unwrap();
             serde_json::from_str(body).unwrap()
         } else {
+            let timer = Timer {
+                id: Some(id),
+                project_id: project_id,
+                task_id: task_id,
+                notes: Some(notes),
+                is_running: is_running,
+                hours: Some(hours),
+                spent_date: Some(spent_date),
+            };
             let mut res = self.api_patch_request(&url, &timer);
             let body = &res.text().unwrap();
             serde_json::from_str(body).unwrap()
         }
     }
 
-    pub fn delete_timer(&self, timer: &Timer) -> TimeEntry {
-        let url = format!(
-            "https://api.harvestapp.com/v2/time_entries/{}",
-            timer.id.unwrap()
-        );
+    pub fn delete_timer(&self, timer_id: u32) -> TimeEntry {
+        let url = format!("https://api.harvestapp.com/v2/time_entries/{}", timer_id);
 
         let mut res = self.api_delete_request(&url);
         let body = &res.text().unwrap();
