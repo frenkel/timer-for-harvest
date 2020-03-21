@@ -10,6 +10,7 @@ pub enum Event {
     TimerUpdated,
     TimerDeleted,
     Loading(Option<u32>),
+    OpenPopup(u32), /* actually sent from ui to itself */
 }
 
 pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: ui::Event) {

@@ -53,9 +53,10 @@ pub fn main_window() {
     .unwrap();
 
     application.connect_activate(move |app| {
-        let (to_foreground, from_background) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
+        let (tx_foreground, rx_foreground) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
         let (to_background, from_foreground) = mpsc::channel();
         let ui_to_background = to_background.clone();
+        let background_to_foreground = tx_foreground.clone();
 
         let ui = Rc::new(Ui::new(ui_to_background, app));
         Ui::connect_main_window_signals(&ui);
@@ -64,12 +65,12 @@ pub fn main_window() {
         thread::spawn(move || {
             let api = Harvest::new();
             for event in from_foreground {
-                background::handle_event(&api, &to_foreground, event);
+                background::handle_event(&api, &background_to_foreground, event);
             }
         });
 
-        from_background.attach(None, move |event| {
-            handle_event(&ui, &to_background, event);
+        rx_foreground.attach(None, move |event| {
+            handle_event(&ui, &to_background, &tx_foreground, event);
             glib::Continue(true)
         });
     });
@@ -77,7 +78,8 @@ pub fn main_window() {
     application.run(&args().collect::<Vec<_>>());
 }
 
-fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: background::Event) {
+fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>,
+        to_foreground: &glib::Sender<background::Event>, event: background::Event) {
     match event {
         background::Event::RetrievedProjectAssignments(project_assignments) => {
             println!("Processing project assignments");
@@ -89,7 +91,7 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: backgro
         background::Event::RetrievedTimeEntries(time_entries) => {
             println!("Processing time entries");
             ui.load_time_entries(time_entries);
-            Ui::connect_time_entry_signals(&ui);
+            Ui::connect_time_entry_signals(&ui, &to_foreground);
         }
         background::Event::TimerStarted => {
             println!("Timer started");
@@ -140,6 +142,34 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: backgro
                     }
                 }
                 None => {}
+            }
+        },
+        background::Event::OpenPopup(time_entry_id) => {
+            println!("Opening popup");
+            for time_entry_row in ui.time_entries.borrow().iter() {
+                let time_entry = time_entry_row.time_entry.borrow();
+                if time_entry.id == time_entry_id {
+                    let notes = match time_entry.notes.as_ref() {
+                        Some(n) => Some(n.to_string()),
+                        None => None,
+                    };
+                    let popup = Popup::new(
+                        Timer {
+                            id: Some(time_entry.id),
+                            project_id: time_entry.project.id,
+                            task_id: time_entry.task.id,
+                            spent_date: Some(time_entry.spent_date.clone()),
+                            notes: notes,
+                            hours: Some(time_entry.hours),
+                            is_running: time_entry.is_running,
+                        },
+                        Rc::clone(&ui.project_assignments),
+                        ui.main_window.clone(),
+                        ui.to_background.clone(),
+                    );
+                    Popup::connect_signals(&Rc::new(popup), &ui);
+                    return;
+                }
             }
         }
     }
@@ -271,7 +301,8 @@ impl Ui {
         });
     }
 
-    pub fn connect_time_entry_signals(ui: &Rc<Ui>) {
+    pub fn connect_time_entry_signals(ui: &Rc<Ui>,
+            to_foreground: &glib::Sender<background::Event>) {
         for time_entry_row in ui.time_entries.borrow().iter() {
             if time_entry_row.time_entry.borrow().is_running {
                 let time_entries_ref = Rc::clone(&ui.time_entries);
@@ -305,44 +336,23 @@ impl Ui {
             let to_background_clone = ui.to_background.clone();
             let is_running = time_entry_row.time_entry.borrow().is_running;
             let id = time_entry_row.time_entry.borrow().id;
-            time_entry_row
-                .start_stop_button
-                .connect_clicked(move |_button| {
-                    if is_running {
-                        to_background_clone
-                            .send(Event::StopTimer(id))
-                            .expect("Sending message to background thread");
-                    } else {
-                        to_background_clone
-                            .send(Event::RestartTimer(id))
-                            .expect("Sending message to background thread");
-                    }
-                });
+            time_entry_row.start_stop_button.connect_clicked(move |_button| {
+                if is_running {
+                    to_background_clone
+                        .send(Event::StopTimer(id))
+                        .expect("Sending message to background thread");
+                } else {
+                    to_background_clone
+                        .send(Event::RestartTimer(id))
+                        .expect("Sending message to background thread");
+                }
+            });
 
-            let ui_ref2 = Rc::clone(&ui);
-            let time_entry_ref2 = Rc::clone(&time_entry_row.time_entry);
-            time_entry_row.edit_button.connect_clicked(move |_| {
-                let project_assignments_ref = Rc::clone(&ui_ref2.project_assignments);
-                let time_entry_ref3 = time_entry_ref2.borrow();
-                let notes = match time_entry_ref3.notes.as_ref() {
-                    Some(n) => Some(n.to_string()),
-                    None => None,
-                };
-                let popup = Popup::new(
-                    Timer {
-                        id: Some(time_entry_ref3.id),
-                        project_id: time_entry_ref3.project.id,
-                        task_id: time_entry_ref3.task.id,
-                        spent_date: Some(time_entry_ref3.spent_date.clone()),
-                        notes: notes,
-                        hours: Some(time_entry_ref3.hours),
-                        is_running: time_entry_ref3.is_running,
-                    },
-                    project_assignments_ref,
-                    ui_ref2.main_window.clone(),
-                    ui_ref2.to_background.clone(),
-                );
-                Popup::connect_signals(&Rc::new(popup), &ui_ref2);
+            let time_entry_id = time_entry_row.time_entry.borrow().id;
+            let to_foreground = to_foreground.clone();
+            time_entry_row.edit_button.connect_clicked(move |_button| {
+                to_foreground.send(background::Event::OpenPopup(time_entry_id))
+                    .expect("Sending message to foreground");
             });
         }
     }
