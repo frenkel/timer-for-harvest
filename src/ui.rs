@@ -260,19 +260,16 @@ impl Ui {
                 });
             }
 
-            let ui_ref = Rc::clone(&ui);
-            let time_entry_ref = Rc::clone(&time_entry_row.time_entry);
+            let to_background_clone = ui.to_background.clone();
+            let is_running = time_entry_row.time_entry.borrow().is_running;
+            let id = time_entry_row.time_entry.borrow().id;
             time_entry_row.start_stop_button.connect_clicked(move |button| {
-                button.set_sensitive(false);
-                let id = time_entry_ref.borrow().id;
-                if time_entry_ref.borrow().is_running {
-                    ui_ref
-                        .to_background
+                if is_running {
+                    to_background_clone
                         .send(Event::StopTimer(id))
                         .expect("Sending message to background thread");
                 } else {
-                    ui_ref
-                        .to_background
+                    to_background_clone
                         .send(Event::RestartTimer(id))
                         .expect("Sending message to background thread");
                 }
