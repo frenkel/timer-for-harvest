@@ -120,7 +120,8 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: backgro
         }
         background::Event::Loading(id) => {
             println!("Loading");
-            ui.main_window.get_titlebar()
+            ui.main_window
+                .get_titlebar()
                 .unwrap()
                 .downcast::<gtk::HeaderBar>()
                 .unwrap()
@@ -263,17 +264,19 @@ impl Ui {
             let to_background_clone = ui.to_background.clone();
             let is_running = time_entry_row.time_entry.borrow().is_running;
             let id = time_entry_row.time_entry.borrow().id;
-            time_entry_row.start_stop_button.connect_clicked(move |button| {
-                if is_running {
-                    to_background_clone
-                        .send(Event::StopTimer(id))
-                        .expect("Sending message to background thread");
-                } else {
-                    to_background_clone
-                        .send(Event::RestartTimer(id))
-                        .expect("Sending message to background thread");
-                }
-            });
+            time_entry_row
+                .start_stop_button
+                .connect_clicked(move |_button| {
+                    if is_running {
+                        to_background_clone
+                            .send(Event::StopTimer(id))
+                            .expect("Sending message to background thread");
+                    } else {
+                        to_background_clone
+                            .send(Event::RestartTimer(id))
+                            .expect("Sending message to background thread");
+                    }
+                });
 
             let ui_ref2 = Rc::clone(&ui);
             let time_entry_ref2 = Rc::clone(&time_entry_row.time_entry);

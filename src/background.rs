@@ -15,8 +15,9 @@ pub enum Event {
 pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: ui::Event) {
     match event {
         ui::Event::RetrieveProjectAssignments => {
-            to_foreground.send(Event::Loading(None))
-                    .expect("Sending message to foreground");
+            to_foreground
+                .send(Event::Loading(None))
+                .expect("Sending message to foreground");
 
             println!("Retrieving project assignments");
             let mut project_assignments = api.active_project_assignments();
@@ -31,8 +32,9 @@ pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: u
                 .expect("Sending message to foreground");
         }
         ui::Event::RetrieveTimeEntries => {
-            to_foreground.send(Event::Loading(None))
-                    .expect("Sending message to foreground");
+            to_foreground
+                .send(Event::Loading(None))
+                .expect("Sending message to foreground");
 
             println!("Retrieving time entries");
             let user = api.current_user();
@@ -41,8 +43,9 @@ pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: u
                 .expect("Sending message to foreground");
         }
         ui::Event::StartTimer(project_id, task_id, notes, hours) => {
-            to_foreground.send(Event::Loading(None))
-                    .expect("Sending message to foreground");
+            to_foreground
+                .send(Event::Loading(None))
+                .expect("Sending message to foreground");
 
             println!("Starting timer");
             api.start_timer(project_id, task_id, &notes, hours);
@@ -51,8 +54,9 @@ pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: u
                 .expect("Sending message to foreground");
         }
         ui::Event::StopTimer(id) => {
-            to_foreground.send(Event::Loading(Some(id)))
-                    .expect("Sending message to foreground");
+            to_foreground
+                .send(Event::Loading(Some(id)))
+                .expect("Sending message to foreground");
 
             println!("Stopping timer");
             api.stop_timer(id);
@@ -61,8 +65,9 @@ pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: u
                 .expect("Sending message to foreground");
         }
         ui::Event::RestartTimer(id) => {
-            to_foreground.send(Event::Loading(Some(id)))
-                    .expect("Sending message to foreground");
+            to_foreground
+                .send(Event::Loading(Some(id)))
+                .expect("Sending message to foreground");
 
             println!("Restarting timer");
             api.restart_timer(id);
@@ -71,8 +76,9 @@ pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: u
                 .expect("Sending message to foreground");
         }
         ui::Event::UpdateTimer(id, project_id, task_id, notes, hours, is_running, spent_date) => {
-            to_foreground.send(Event::Loading(Some(id)))
-                    .expect("Sending message to foreground");
+            to_foreground
+                .send(Event::Loading(Some(id)))
+                .expect("Sending message to foreground");
 
             println!("Updating timer");
             api.update_timer(
@@ -83,8 +89,9 @@ pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: u
                 .expect("Sending message to foreground");
         }
         ui::Event::DeleteTimer(id) => {
-            to_foreground.send(Event::Loading(Some(id)))
-                    .expect("Sending message to foreground");
+            to_foreground
+                .send(Event::Loading(Some(id)))
+                .expect("Sending message to foreground");
 
             println!("Deleting timer");
             api.delete_timer(id);
