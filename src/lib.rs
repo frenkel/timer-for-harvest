@@ -24,7 +24,7 @@ pub struct Harvest {
 pub struct Project {
     pub id: u32,
     pub name: String,
-    pub code: String,
+    pub code: Option<String>,
     pub client: Option<Client>,
 }
 
@@ -132,10 +132,10 @@ pub struct User {
 
 impl Project {
     pub fn name_and_code(&self) -> String {
-        if self.code == "" {
+        if self.code == None || self.code.as_ref().unwrap() == "" {
             self.name.clone()
         } else {
-            format!("[{}] {}", self.code, self.name)
+            format!("[{}] {}", self.code.as_ref().unwrap(), self.name)
         }
     }
 }
