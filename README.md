@@ -16,7 +16,7 @@ up-to-date** with the releases, because currently we don't provide package
 repositories.
 
 ## Usage
-After installation your GNOME installation should be able to find the
+After installation your GNOME shell should be able to find the
 application when you type "Timer for Harvest" in the activity searcher.
 
 ### First usage
