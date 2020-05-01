@@ -43,7 +43,8 @@ your account for a maximum of 14 days.
 
 The authorization token is currently stored on the file system, namely in
 $XDG\_CONFIG\_HOME/timer-for-harvest.json. In the future we hope to move this
-token to a more secure location, such as GNOME Seahorse.
+token to a more secure location, such as
+[libsecret](https://wiki.gnome.org/Projects/Libsecret).
 
 ## Wishlist
 - Idle detection to ask user whether idle time should be subtracted or booked
