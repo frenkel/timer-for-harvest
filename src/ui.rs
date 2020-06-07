@@ -4,7 +4,6 @@ use crate::popup::Popup;
 use gio::prelude::*;
 use gtk::prelude::*;
 use std::cell::RefCell;
-use std::convert::TryInto;
 use std::env::args;
 use std::rc::Rc;
 use std::sync::mpsc;
@@ -308,10 +307,10 @@ impl Ui {
 
     pub fn load_time_entries(&self, time_entries: Vec<TimeEntry>) {
         let mut total_hours = 0.0;
-        let rows = gtk::Box::new(
-            gtk::Orientation::Vertical,
-            time_entries.len().try_into().unwrap(),
-        );
+        let mut row_number = 0;
+        let grid = gtk::Grid::new();
+        grid.set_column_spacing(10);
+        grid.set_row_spacing(10);
 
         /* stop all running gtk timers */
         for old_entry in self.time_entries.borrow().iter() {
@@ -323,28 +322,25 @@ impl Ui {
         for time_entry in time_entries {
             total_hours += time_entry.hours;
 
-            let row = gtk::Box::new(gtk::Orientation::Horizontal, 4);
-            let data = gtk::Box::new(gtk::Orientation::Vertical, 2);
-            let project_client = format!(
-                "<b>{}</b> ({})",
-                &time_entry.project.name_and_code(),
-                &time_entry.client.name
-            );
-            let project_label = left_aligned_label(&project_client);
-            project_label.set_line_wrap(true);
-            project_label.set_use_markup(true);
-            data.pack_start(&project_label, true, false, 0);
             let notes = match time_entry.notes.as_ref() {
                 Some(n) => n.to_string(),
                 None => "".to_string(),
             };
-            let task_notes = format!("{} - {}", &time_entry.task.name, &notes);
-            let notes_label = left_aligned_label(&task_notes);
-            notes_label.set_line_wrap(true);
-            data.pack_start(&notes_label, true, false, 0);
-            row.pack_start(&data, true, true, 0);
+            let project_client = format!(
+                "<b>{}</b> ({})\n{} - {}",
+                &time_entry.project.name_and_code(),
+                &time_entry.client.name,
+                &time_entry.task.name,
+                &notes
+            );
+            let project_label = left_aligned_label(&project_client);
+            project_label.set_line_wrap(true);
+            project_label.set_use_markup(true);
+            grid.attach(&project_label, 0, row_number, 1, 1);
+
             let hours_label = left_aligned_label(&f32_to_duration_str(time_entry.hours));
-            row.pack_start(&hours_label, false, false, 10);
+            grid.attach(&hours_label, 1, row_number, 1, 1);
+
             let button = gtk::Button::new();
             let rc = Rc::new(RefCell::new(time_entry));
             let time_entry_clone = Rc::clone(&rc);
@@ -354,16 +350,13 @@ impl Ui {
             } else {
                 button.set_label("Start");
             };
-            let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 0);
-            prevent_vexpand.set_valign(gtk::Align::Center);
-            prevent_vexpand.pack_start(&button, false, false, 0);
-            row.pack_start(&prevent_vexpand, false, false, 0);
+            grid.attach(&button, 2, row_number, 1, 1);
+
             let edit_button = gtk::Button::new_with_label("Edit");
-            let prevent_vexpand = gtk::Box::new(gtk::Orientation::Vertical, 0);
-            prevent_vexpand.set_valign(gtk::Align::Center);
-            prevent_vexpand.pack_start(&edit_button, false, false, 0);
-            row.pack_start(&prevent_vexpand, false, false, 0);
-            rows.pack_end(&row, true, false, 0);
+            grid.attach(&edit_button, 3, row_number, 1, 1);
+
+            row_number += 2;
+
             self.time_entries.borrow_mut().push(TimeEntryRow {
                 time_entry: rc,
                 start_stop_button: button,
@@ -382,13 +375,13 @@ impl Ui {
 
         match self.main_window.get_children().first() {
             Some(child) => {
-                if child.is::<gtk::Box>() {
+                if child.is::<gtk::Grid>() {
                     self.main_window.remove(child);
                 }
             }
             None => {}
         }
-        self.main_window.add(&rows);
+        self.main_window.add(&grid);
         self.main_window.show_all();
     }
 }
