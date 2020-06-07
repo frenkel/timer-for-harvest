@@ -390,23 +390,38 @@ impl Ui {
             let hours_label = left_aligned_label(&f32_to_duration_str(time_entry.hours));
             grid.attach(&hours_label, 1, row_number, 1, 1);
 
-            let button = gtk::Button::new();
+            let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+            hbox.set_spacing(0);
+            hbox.get_style_context().add_class(&gtk::STYLE_CLASS_LINKED);
+
+            let button: gtk::Button;
             let rc = Rc::new(RefCell::new(time_entry));
             let time_entry_clone = Rc::clone(&rc);
             if time_entry_clone.borrow().is_running {
-                button.set_label("Stop");
+                button = gtk::Button::new_from_icon_name(
+                    Some("media-playback-stop-symbolic"),
+                    gtk::IconSize::Button,
+                );
                 button
                     .get_style_context()
                     .add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
             } else {
-                button.set_label("Start");
+                button = gtk::Button::new_from_icon_name(
+                    Some("media-playback-start-symbolic"),
+                    gtk::IconSize::Button,
+                );
             };
             button.set_valign(gtk::Align::Center);
-            grid.attach(&button, 2, row_number, 1, 1);
+            hbox.pack_start(&button, false, false, 0);
 
-            let edit_button = gtk::Button::new_with_label("Edit");
+            let edit_button = gtk::Button::new_from_icon_name(
+                Some("document-edit-symbolic"),
+                gtk::IconSize::Button,
+            );
             edit_button.set_valign(gtk::Align::Center);
-            grid.attach(&edit_button, 3, row_number, 1, 1);
+            hbox.pack_start(&edit_button, false, false, 0);
+
+            grid.attach(&hbox, 2, row_number, 1, 1);
 
             row_number -= 1;
 
