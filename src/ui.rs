@@ -161,7 +161,8 @@ impl Ui {
 
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
 
-        let button = gtk::Button::new_from_icon_name(Some("list-add-symbolic"), gtk::IconSize::Button);
+        let button =
+            gtk::Button::new_from_icon_name(Some("list-add-symbolic"), gtk::IconSize::Button);
         button.set_sensitive(false);
         container.pack_start(&button);
 
@@ -400,7 +401,9 @@ impl Ui {
             let time_entry_clone = Rc::clone(&rc);
             if time_entry_clone.borrow().is_running {
                 button.set_label("Stop");
-                button.get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
+                button
+                    .get_style_context()
+                    .add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
             } else {
                 button.set_label("Start");
             };
