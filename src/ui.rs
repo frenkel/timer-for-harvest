@@ -29,6 +29,7 @@ pub struct Ui {
     time_entries: Rc<RefCell<Vec<TimeEntryRow>>>,
     pub project_assignments: Rc<RefCell<Vec<ProjectAssignment>>>,
     for_date: Rc<RefCell<chrono::NaiveDate>>,
+    total_amount_label: gtk::Label,
 }
 
 struct TimeEntryRow {
@@ -186,6 +187,8 @@ impl Ui {
             .send(Event::RetrieveTimeEntries(now.to_string()))
             .expect("Sending message to background thread");
 
+        let amount_label = left_aligned_label(&"");
+
         Ui {
             main_window: window,
             to_background: to_background,
@@ -195,6 +198,7 @@ impl Ui {
             time_entries: Rc::new(RefCell::new(vec![])),
             project_assignments: Rc::new(RefCell::new(vec![])),
             for_date: Rc::new(RefCell::new(now)),
+            total_amount_label: amount_label,
         }
     }
 
@@ -273,14 +277,7 @@ impl Ui {
                 let time_entries_ref = Rc::clone(&ui.time_entries);
                 let time_entry_ref = Rc::clone(&time_entry_row.time_entry);
                 let hours_label_ref = time_entry_row.hours_label.clone();
-                let date = Rc::clone(&ui.for_date);
-                let header_bar_ref = ui
-                    .main_window
-                    .get_titlebar()
-                    .unwrap()
-                    .downcast::<gtk::HeaderBar>()
-                    .unwrap()
-                    .clone();
+                let total_amount_label = ui.total_amount_label.clone();
 
                 gtk::timeout_add_seconds(60, move || {
                     let mut mut_time_entry_ref = time_entry_ref.borrow_mut();
@@ -297,13 +294,9 @@ impl Ui {
                                 total += mut_time_entry_ref.hours;
                             }
                         }
-                        let title = format!(
-                            "Harvest - {} - {}",
-                            date.borrow().format("%a %-d %b"),
-                            f32_to_duration_str(total),
-                        );
-                        header_bar_ref.set_title(Some(&title));
-
+                        total_amount_label
+                            .set_text(&format!("<b>{}</b>", f32_to_duration_str(total)));
+                        total_amount_label.set_use_markup(true);
                         glib::Continue(true)
                     } else {
                         glib::Continue(false)
@@ -358,7 +351,8 @@ impl Ui {
 
     pub fn load_time_entries(&self, time_entries: Vec<TimeEntry>) {
         let mut total_hours = 0.0;
-        let mut row_number = 0;
+        let total_entries = time_entries.len() as i32;
+        let mut row_number = total_entries;
         let grid = gtk::Grid::new();
         grid.set_column_spacing(12);
         grid.set_row_spacing(18);
@@ -414,7 +408,7 @@ impl Ui {
             edit_button.set_valign(gtk::Align::Center);
             grid.attach(&edit_button, 3, row_number, 1, 1);
 
-            row_number += 2;
+            row_number -= 1;
 
             self.time_entries.borrow_mut().push(TimeEntryRow {
                 time_entry: rc,
@@ -424,11 +418,14 @@ impl Ui {
             });
         }
 
-        let title = format!(
-            "Harvest - {} - {}",
-            self.for_date.borrow().format("%a %-d %b"),
-            f32_to_duration_str(total_hours)
-        );
+        let total_label = left_aligned_label(&"<b>Total</b>");
+        total_label.set_use_markup(true);
+        grid.attach(&total_label, 0, total_entries + 1, 1, 1);
+        self.total_amount_label
+            .set_text(&format!("<b>{}</b>", &f32_to_duration_str(total_hours)));
+        self.total_amount_label.set_use_markup(true);
+
+        let title = format!("Harvest - {}", self.for_date.borrow().format("%a %-d %b"));
         self.main_window
             .get_titlebar()
             .unwrap()
@@ -444,6 +441,10 @@ impl Ui {
             }
             None => {}
         }
+
+        /* re-use amount label */
+        grid.attach(&self.total_amount_label, 1, total_entries + 1, 1, 1);
+
         self.main_window.add(&grid);
         self.main_window.show_all();
     }
