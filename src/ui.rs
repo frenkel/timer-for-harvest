@@ -153,7 +153,7 @@ impl Ui {
 
         window.set_title("Harvest");
         window.set_titlebar(Some(&container));
-        window.set_border_width(10);
+        window.set_border_width(18);
         window.set_position(gtk::WindowPosition::Center);
         window.set_default_size(500, 300);
         window.set_size_request(500, 300);
@@ -313,8 +313,8 @@ impl Ui {
         let mut total_hours = 0.0;
         let mut row_number = 0;
         let grid = gtk::Grid::new();
-        grid.set_column_spacing(10);
-        grid.set_row_spacing(10);
+        grid.set_column_spacing(12);
+        grid.set_row_spacing(18);
 
         /* stop all running gtk timers */
         for old_entry in self.time_entries.borrow().iter() {
