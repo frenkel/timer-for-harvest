@@ -1,6 +1,5 @@
 use crate::background;
 use crate::popup::Popup;
-use chrono::Local;
 
 use gio::prelude::*;
 use gtk::prelude::*;
@@ -25,9 +24,11 @@ pub struct Ui {
     main_window: gtk::ApplicationWindow,
     to_background: mpsc::Sender<Event>,
     start_button: gtk::Button,
+    prev_button: gtk::Button,
+    next_button: gtk::Button,
     time_entries: Rc<RefCell<Vec<TimeEntryRow>>>,
     pub project_assignments: Rc<RefCell<Vec<ProjectAssignment>>>,
-    for_date: String
+    for_date: Rc<RefCell<chrono::NaiveDate>>,
 }
 
 struct TimeEntryRow {
@@ -92,31 +93,31 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: backgro
         background::Event::TimerStarted => {
             println!("Timer started");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
+                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerStopped => {
             println!("Timer stopped");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
+                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerRestarted => {
             println!("Timer restarted");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
+                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerUpdated => {
             println!("Timer updated");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
+                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerDeleted => {
             println!("Timer deleted");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
+                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
                 .expect("Sending message to background thread");
         }
         background::Event::Loading(id) => {
@@ -164,28 +165,42 @@ impl Ui {
         button.set_sensitive(false);
         container.pack_start(&button);
 
+        let prev_button =
+            gtk::Button::new_from_icon_name(Some("go-previous-symbolic"), gtk::IconSize::Button);
+        container.pack_start(&prev_button);
+
+        let next_button =
+            gtk::Button::new_from_icon_name(Some("go-next-symbolic"), gtk::IconSize::Button);
+        container.pack_start(&next_button);
+
         to_background
             .send(Event::RetrieveProjectAssignments)
             .expect("Sending message to background thread");
-        let now = Local::now().format("%Y-%m-%d").to_string();
+        let now = chrono::Local::today().naive_local();
         to_background
-            .send(Event::RetrieveTimeEntries(now.clone()))
+            .send(Event::RetrieveTimeEntries(now.to_string()))
             .expect("Sending message to background thread");
 
         Ui {
             main_window: window,
             to_background: to_background,
             start_button: button,
+            prev_button: prev_button,
+            next_button: next_button,
             time_entries: Rc::new(RefCell::new(vec![])),
             project_assignments: Rc::new(RefCell::new(vec![])),
-            for_date: now
+            for_date: Rc::new(RefCell::new(now)),
         }
     }
 
     pub fn connect_main_window_signals(ui: &Rc<Ui>) {
         let to_background = ui.to_background.clone();
+        let prev_to_background = ui.to_background.clone();
+        let next_to_background = ui.to_background.clone();
         let key_press_event_ui_ref = Rc::clone(&ui);
-        let button_ui_ref = Rc::clone(&ui);
+        let start_button_ui_ref = Rc::clone(&ui);
+        let next_button_ui_ref = Rc::clone(&ui);
+        let prev_button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
             let project_assignments_ref = Rc::clone(&ui_ref.project_assignments);
             let popup = Popup::new(
@@ -209,7 +224,9 @@ impl Ui {
             .connect_key_press_event(move |_window, event| {
                 if event.get_keyval() == gdk::enums::key::F5 {
                     to_background
-                        .send(Event::RetrieveTimeEntries(key_press_event_ui_ref.for_date.clone()))
+                        .send(Event::RetrieveTimeEntries(
+                            key_press_event_ui_ref.for_date.borrow().to_string(),
+                        ))
                         .expect("Sending message to background thread");
                     Inhibit(true)
                 } else if event.get_keyval() == gdk::enums::key::n {
@@ -221,7 +238,27 @@ impl Ui {
             });
 
         ui.start_button.connect_clicked(move |_| {
-            open_popup(&button_ui_ref);
+            open_popup(&start_button_ui_ref);
+        });
+
+        ui.prev_button.connect_clicked(move |_| {
+            let new_date = { prev_button_ui_ref.for_date.borrow().pred() };
+            prev_button_ui_ref.for_date.replace(new_date);
+            prev_to_background
+                .send(Event::RetrieveTimeEntries(
+                    prev_button_ui_ref.for_date.borrow().to_string(),
+                ))
+                .expect("Sending message to background thread");
+        });
+
+        ui.next_button.connect_clicked(move |_| {
+            let new_date = { next_button_ui_ref.for_date.borrow().succ() };
+            next_button_ui_ref.for_date.replace(new_date);
+            next_to_background
+                .send(Event::RetrieveTimeEntries(
+                    next_button_ui_ref.for_date.borrow().to_string(),
+                ))
+                .expect("Sending message to background thread");
         });
     }
 
@@ -327,7 +364,10 @@ impl Ui {
             total_hours += time_entry.hours;
 
             let notes = match time_entry.notes.as_ref() {
-                Some(n) => n.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"),
+                Some(n) => n
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;"),
                 None => "".to_string(),
             };
             let project_client = format!(

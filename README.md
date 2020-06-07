@@ -49,7 +49,6 @@ token to a more secure location, such as
 ## Wishlist
 - Idle detection to ask user whether idle time should be subtracted or booked
   as a new time entry.
-- Ability to see other days then today.
 - Authentication token storage in [libsecret](https://wiki.gnome.org/Projects/Libsecret).
 - Support for newlines in the notes entry field. This appears to only be
   possible with an GTK input field that supports markup, which looks strange.
