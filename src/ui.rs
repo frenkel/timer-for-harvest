@@ -165,13 +165,17 @@ impl Ui {
         button.set_sensitive(false);
         container.pack_start(&button);
 
+        let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+        hbox.set_spacing(0);
+        hbox.get_style_context().add_class(&gtk::STYLE_CLASS_LINKED);
         let prev_button =
             gtk::Button::new_from_icon_name(Some("go-previous-symbolic"), gtk::IconSize::Button);
-        container.pack_start(&prev_button);
+        hbox.pack_start(&prev_button, false, false, 0);
 
         let next_button =
             gtk::Button::new_from_icon_name(Some("go-next-symbolic"), gtk::IconSize::Button);
-        container.pack_start(&next_button);
+        hbox.pack_start(&next_button, false, false, 0);
+        container.pack_start(&hbox);
 
         to_background
             .send(Event::RetrieveProjectAssignments)
