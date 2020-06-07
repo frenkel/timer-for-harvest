@@ -389,6 +389,7 @@ impl Ui {
             let project_label = left_aligned_label(&project_client);
             project_label.set_line_wrap(true);
             project_label.set_use_markup(true);
+            project_label.set_hexpand(true);
             grid.attach(&project_label, 0, row_number, 1, 1);
 
             let hours_label = left_aligned_label(&f32_to_duration_str(time_entry.hours));
@@ -403,9 +404,11 @@ impl Ui {
             } else {
                 button.set_label("Start");
             };
+            button.set_valign(gtk::Align::Center);
             grid.attach(&button, 2, row_number, 1, 1);
 
             let edit_button = gtk::Button::new_with_label("Edit");
+            edit_button.set_valign(gtk::Align::Center);
             grid.attach(&edit_button, 3, row_number, 1, 1);
 
             row_number += 2;
