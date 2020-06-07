@@ -31,15 +31,19 @@ pub fn handle_event(api: &Harvest, to_foreground: &glib::Sender<Event>, event: u
                 .send(Event::RetrievedProjectAssignments(project_assignments))
                 .expect("Sending message to foreground");
         }
-        ui::Event::RetrieveTimeEntries => {
+        ui::Event::RetrieveTimeEntries(day) => {
             to_foreground
                 .send(Event::Loading(None))
                 .expect("Sending message to foreground");
 
-            println!("Retrieving time entries");
+            println!("Retrieving time entries for {}", day);
             let user = api.current_user();
             to_foreground
-                .send(Event::RetrievedTimeEntries(api.time_entries_today(user)))
+                .send(Event::RetrievedTimeEntries(api.time_entries_for(
+                    user,
+                    day.clone(),
+                    day,
+                )))
                 .expect("Sending message to foreground");
         }
         ui::Event::StartTimer(project_id, task_id, notes, hours) => {

@@ -1,5 +1,6 @@
 use crate::background;
 use crate::popup::Popup;
+use chrono::Local;
 
 use gio::prelude::*;
 use gtk::prelude::*;
@@ -12,7 +13,7 @@ use timer_for_harvest::*;
 
 pub enum Event {
     RetrieveProjectAssignments,
-    RetrieveTimeEntries,
+    RetrieveTimeEntries(String),
     StartTimer(u32, u32, String, f32),
     StopTimer(u32),
     RestartTimer(u32),
@@ -74,6 +75,7 @@ pub fn main_window() {
 }
 
 fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: background::Event) {
+    let now = Local::now().format("%Y-%m-%d").to_string();
     match event {
         background::Event::RetrievedProjectAssignments(project_assignments) => {
             println!("Processing project assignments");
@@ -90,31 +92,31 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: backgro
         background::Event::TimerStarted => {
             println!("Timer started");
             to_background
-                .send(Event::RetrieveTimeEntries)
+                .send(Event::RetrieveTimeEntries(now))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerStopped => {
             println!("Timer stopped");
             to_background
-                .send(Event::RetrieveTimeEntries)
+                .send(Event::RetrieveTimeEntries(now))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerRestarted => {
             println!("Timer restarted");
             to_background
-                .send(Event::RetrieveTimeEntries)
+                .send(Event::RetrieveTimeEntries(now))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerUpdated => {
             println!("Timer updated");
             to_background
-                .send(Event::RetrieveTimeEntries)
+                .send(Event::RetrieveTimeEntries(now))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerDeleted => {
             println!("Timer deleted");
             to_background
-                .send(Event::RetrieveTimeEntries)
+                .send(Event::RetrieveTimeEntries(now))
                 .expect("Sending message to background thread");
         }
         background::Event::Loading(id) => {
@@ -165,8 +167,9 @@ impl Ui {
         to_background
             .send(Event::RetrieveProjectAssignments)
             .expect("Sending message to background thread");
+        let now = Local::now().format("%Y-%m-%d").to_string();
         to_background
-            .send(Event::RetrieveTimeEntries)
+            .send(Event::RetrieveTimeEntries(now))
             .expect("Sending message to background thread");
 
         Ui {
@@ -204,8 +207,9 @@ impl Ui {
         ui.main_window
             .connect_key_press_event(move |_window, event| {
                 if event.get_keyval() == gdk::enums::key::F5 {
+                    let now = Local::now().format("%Y-%m-%d").to_string();
                     to_background
-                        .send(Event::RetrieveTimeEntries)
+                        .send(Event::RetrieveTimeEntries(now))
                         .expect("Sending message to background thread");
                     Inhibit(true)
                 } else if event.get_keyval() == gdk::enums::key::n {

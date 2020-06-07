@@ -298,11 +298,10 @@ impl Harvest {
         project_assignments
     }
 
-    pub fn time_entries_today(&self, user: User) -> Vec<TimeEntry> {
-        let now = Local::now().format("%Y-%m-%d");
+    pub fn time_entries_for(&self, user: User, from: String, till: String) -> Vec<TimeEntry> {
         let url = format!(
             "https://api.harvestapp.com/v2/time_entries?user_id={}&from={}&to={}",
-            user.id, now, now
+            user.id, from, till
         );
         let mut res = self.api_get_request(&url);
         let body = &res.text().unwrap();
