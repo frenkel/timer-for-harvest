@@ -27,6 +27,7 @@ pub struct Ui {
     start_button: gtk::Button,
     time_entries: Rc<RefCell<Vec<TimeEntryRow>>>,
     pub project_assignments: Rc<RefCell<Vec<ProjectAssignment>>>,
+    for_date: String
 }
 
 struct TimeEntryRow {
@@ -75,7 +76,6 @@ pub fn main_window() {
 }
 
 fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: background::Event) {
-    let now = Local::now().format("%Y-%m-%d").to_string();
     match event {
         background::Event::RetrievedProjectAssignments(project_assignments) => {
             println!("Processing project assignments");
@@ -92,31 +92,31 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>, event: backgro
         background::Event::TimerStarted => {
             println!("Timer started");
             to_background
-                .send(Event::RetrieveTimeEntries(now))
+                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerStopped => {
             println!("Timer stopped");
             to_background
-                .send(Event::RetrieveTimeEntries(now))
+                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerRestarted => {
             println!("Timer restarted");
             to_background
-                .send(Event::RetrieveTimeEntries(now))
+                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerUpdated => {
             println!("Timer updated");
             to_background
-                .send(Event::RetrieveTimeEntries(now))
+                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
                 .expect("Sending message to background thread");
         }
         background::Event::TimerDeleted => {
             println!("Timer deleted");
             to_background
-                .send(Event::RetrieveTimeEntries(now))
+                .send(Event::RetrieveTimeEntries(ui.for_date.clone()))
                 .expect("Sending message to background thread");
         }
         background::Event::Loading(id) => {
@@ -169,7 +169,7 @@ impl Ui {
             .expect("Sending message to background thread");
         let now = Local::now().format("%Y-%m-%d").to_string();
         to_background
-            .send(Event::RetrieveTimeEntries(now))
+            .send(Event::RetrieveTimeEntries(now.clone()))
             .expect("Sending message to background thread");
 
         Ui {
@@ -178,6 +178,7 @@ impl Ui {
             start_button: button,
             time_entries: Rc::new(RefCell::new(vec![])),
             project_assignments: Rc::new(RefCell::new(vec![])),
+            for_date: now
         }
     }
 
@@ -207,9 +208,8 @@ impl Ui {
         ui.main_window
             .connect_key_press_event(move |_window, event| {
                 if event.get_keyval() == gdk::enums::key::F5 {
-                    let now = Local::now().format("%Y-%m-%d").to_string();
                     to_background
-                        .send(Event::RetrieveTimeEntries(now))
+                        .send(Event::RetrieveTimeEntries(key_press_event_ui_ref.for_date.clone()))
                         .expect("Sending message to background thread");
                     Inhibit(true)
                 } else if event.get_keyval() == gdk::enums::key::n {
