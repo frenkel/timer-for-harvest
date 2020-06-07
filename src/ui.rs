@@ -327,7 +327,7 @@ impl Ui {
             total_hours += time_entry.hours;
 
             let notes = match time_entry.notes.as_ref() {
-                Some(n) => n.to_string(),
+                Some(n) => n.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"),
                 None => "".to_string(),
             };
             let project_client = format!(
