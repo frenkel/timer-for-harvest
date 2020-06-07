@@ -268,6 +268,7 @@ impl Ui {
                 let time_entries_ref = Rc::clone(&ui.time_entries);
                 let time_entry_ref = Rc::clone(&time_entry_row.time_entry);
                 let hours_label_ref = time_entry_row.hours_label.clone();
+                let date = Rc::clone(&ui.for_date);
                 let header_bar_ref = ui
                     .main_window
                     .get_titlebar()
@@ -291,7 +292,11 @@ impl Ui {
                                 total += mut_time_entry_ref.hours;
                             }
                         }
-                        let title = format!("Harvest - {}", f32_to_duration_str(total));
+                        let title = format!(
+                            "Harvest - {} - {}",
+                            date.borrow().format("%a %-d %b"),
+                            f32_to_duration_str(total),
+                        );
                         header_bar_ref.set_title(Some(&title));
 
                         glib::Continue(true)
@@ -409,7 +414,11 @@ impl Ui {
             });
         }
 
-        let title = format!("Harvest - {}", f32_to_duration_str(total_hours));
+        let title = format!(
+            "Harvest - {} - {}",
+            self.for_date.borrow().format("%a %-d %b"),
+            f32_to_duration_str(total_hours)
+        );
         self.main_window
             .get_titlebar()
             .unwrap()
