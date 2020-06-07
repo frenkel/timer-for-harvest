@@ -161,7 +161,7 @@ impl Ui {
 
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
 
-        let button = gtk::Button::new_with_label("Start");
+        let button = gtk::Button::new_from_icon_name(Some("list-add-symbolic"), gtk::IconSize::Button);
         button.set_sensitive(false);
         container.pack_start(&button);
 
