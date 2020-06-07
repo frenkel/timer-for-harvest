@@ -400,7 +400,7 @@ impl Ui {
             let time_entry_clone = Rc::clone(&rc);
             if time_entry_clone.borrow().is_running {
                 button.set_label("Stop");
-                button.get_style_context().add_class("suggested-action");
+                button.get_style_context().add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
             } else {
                 button.set_label("Start");
             };
