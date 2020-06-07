@@ -11,7 +11,7 @@ and the various BSD's.
 ## Installation
 On the Timer for Harvest github page, click on the releases link. The newest
 release is listed at the top of the page. It contains pre-build binaries for
-Ubuntu 19.10 and Fedora 31. Note that installing these **will not keep you
+Ubuntu 19.10 and Fedora 32. Note that installing these **will not keep you
 up-to-date** with the releases, because currently we don't provide package
 repositories.
 
