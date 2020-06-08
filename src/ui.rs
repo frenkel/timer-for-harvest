@@ -294,9 +294,7 @@ impl Ui {
                                 total += mut_time_entry_ref.hours;
                             }
                         }
-                        total_amount_label
-                            .set_text(&format!("<b>{}</b>", f32_to_duration_str(total)));
-                        total_amount_label.set_use_markup(true);
+                        Ui::update_total_amount(&total_amount_label, total);
                         glib::Continue(true)
                     } else {
                         glib::Continue(false)
@@ -436,9 +434,7 @@ impl Ui {
         let total_label = left_aligned_label(&"<b>Total</b>");
         total_label.set_use_markup(true);
         grid.attach(&total_label, 0, total_entries + 1, 1, 1);
-        self.total_amount_label
-            .set_text(&format!("<b>{}</b>", &f32_to_duration_str(total_hours)));
-        self.total_amount_label.set_use_markup(true);
+        Ui::update_total_amount(&self.total_amount_label, total_hours);
 
         let title = format!("Harvest - {}", self.for_date.borrow().format("%a %-d %b"));
         self.main_window
@@ -462,5 +458,10 @@ impl Ui {
 
         self.main_window.add(&grid);
         self.main_window.show_all();
+    }
+
+    fn update_total_amount(total_amount_label: &gtk::Label, total: f32) {
+        total_amount_label.set_text(&format!("<b>{}</b>", f32_to_duration_str(total)));
+        total_amount_label.set_use_markup(true);
     }
 }
