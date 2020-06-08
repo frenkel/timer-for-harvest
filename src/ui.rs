@@ -12,12 +12,14 @@ use timer_for_harvest::*;
 
 pub enum Event {
     RetrieveProjectAssignments,
-    RetrieveTimeEntries(String),
+    RetrieveTimeEntries,
     StartTimer(u32, u32, String, f32),
     StopTimer(u32),
     RestartTimer(u32),
     UpdateTimer(u32, u32, u32, String, f32, bool, String),
     DeleteTimer(u32),
+    NextDate,
+    PreviousDate,
 }
 
 pub struct Ui {
@@ -28,7 +30,6 @@ pub struct Ui {
     next_button: gtk::Button,
     time_entries: Rc<RefCell<Vec<TimeEntryRow>>>,
     pub project_assignments: Rc<RefCell<Vec<ProjectAssignment>>>,
-    for_date: Rc<RefCell<chrono::NaiveDate>>,
     total_amount_label: gtk::Label,
 }
 
@@ -64,9 +65,7 @@ pub fn main_window() {
 
         thread::spawn(move || {
             let api = Harvest::new();
-            for event in from_foreground {
-                background::handle_event(&api, &background_to_foreground, event);
-            }
+            background::handle_events(&api, from_foreground, &background_to_foreground);
         });
 
         rx_foreground.attach(None, move |event| {
@@ -78,8 +77,12 @@ pub fn main_window() {
     application.run(&args().collect::<Vec<_>>());
 }
 
-fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>,
-        to_foreground: &glib::Sender<background::Event>, event: background::Event) {
+fn handle_event(
+    ui: &Rc<Ui>,
+    to_background: &mpsc::Sender<Event>,
+    to_foreground: &glib::Sender<background::Event>,
+    event: background::Event,
+) {
     match event {
         background::Event::RetrievedProjectAssignments(project_assignments) => {
             println!("Processing project assignments");
@@ -96,31 +99,31 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>,
         background::Event::TimerStarted => {
             println!("Timer started");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
+                .send(Event::RetrieveTimeEntries)
                 .expect("Sending message to background thread");
         }
         background::Event::TimerStopped => {
             println!("Timer stopped");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
+                .send(Event::RetrieveTimeEntries)
                 .expect("Sending message to background thread");
         }
         background::Event::TimerRestarted => {
             println!("Timer restarted");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
+                .send(Event::RetrieveTimeEntries)
                 .expect("Sending message to background thread");
         }
         background::Event::TimerUpdated => {
             println!("Timer updated");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
+                .send(Event::RetrieveTimeEntries)
                 .expect("Sending message to background thread");
         }
         background::Event::TimerDeleted => {
             println!("Timer deleted");
             to_background
-                .send(Event::RetrieveTimeEntries(ui.for_date.borrow().to_string()))
+                .send(Event::RetrieveTimeEntries)
                 .expect("Sending message to background thread");
         }
         background::Event::Loading(id) => {
@@ -143,7 +146,7 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>,
                 }
                 None => {}
             }
-        },
+        }
         background::Event::OpenPopup(time_entry_id) => {
             println!("Opening popup");
             for time_entry_row in ui.time_entries.borrow().iter() {
@@ -171,6 +174,14 @@ fn handle_event(ui: &Rc<Ui>, to_background: &mpsc::Sender<Event>,
                     return;
                 }
             }
+        }
+        background::Event::SetTitle(title) => {
+            ui.main_window
+                .get_titlebar()
+                .unwrap()
+                .downcast::<gtk::HeaderBar>()
+                .unwrap()
+                .set_title(Some(&title));
         }
     }
 }
@@ -212,9 +223,8 @@ impl Ui {
         to_background
             .send(Event::RetrieveProjectAssignments)
             .expect("Sending message to background thread");
-        let now = chrono::Local::today().naive_local();
         to_background
-            .send(Event::RetrieveTimeEntries(now.to_string()))
+            .send(Event::RetrieveTimeEntries)
             .expect("Sending message to background thread");
 
         let amount_label = left_aligned_label(&"");
@@ -227,7 +237,6 @@ impl Ui {
             next_button: next_button,
             time_entries: Rc::new(RefCell::new(vec![])),
             project_assignments: Rc::new(RefCell::new(vec![])),
-            for_date: Rc::new(RefCell::new(now)),
             total_amount_label: amount_label,
         }
     }
@@ -238,8 +247,6 @@ impl Ui {
         let next_to_background = ui.to_background.clone();
         let key_press_event_ui_ref = Rc::clone(&ui);
         let start_button_ui_ref = Rc::clone(&ui);
-        let next_button_ui_ref = Rc::clone(&ui);
-        let prev_button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
             let project_assignments_ref = Rc::clone(&ui_ref.project_assignments);
             let popup = Popup::new(
@@ -263,9 +270,7 @@ impl Ui {
             .connect_key_press_event(move |_window, event| {
                 if event.get_keyval() == gdk::enums::key::F5 {
                     to_background
-                        .send(Event::RetrieveTimeEntries(
-                            key_press_event_ui_ref.for_date.borrow().to_string(),
-                        ))
+                        .send(Event::RetrieveTimeEntries)
                         .expect("Sending message to background thread");
                     Inhibit(true)
                 } else if event.get_keyval() == gdk::enums::key::n {
@@ -281,28 +286,22 @@ impl Ui {
         });
 
         ui.prev_button.connect_clicked(move |_| {
-            let new_date = { prev_button_ui_ref.for_date.borrow().pred() };
-            prev_button_ui_ref.for_date.replace(new_date);
             prev_to_background
-                .send(Event::RetrieveTimeEntries(
-                    prev_button_ui_ref.for_date.borrow().to_string(),
-                ))
+                .send(Event::PreviousDate)
                 .expect("Sending message to background thread");
         });
 
         ui.next_button.connect_clicked(move |_| {
-            let new_date = { next_button_ui_ref.for_date.borrow().succ() };
-            next_button_ui_ref.for_date.replace(new_date);
             next_to_background
-                .send(Event::RetrieveTimeEntries(
-                    next_button_ui_ref.for_date.borrow().to_string(),
-                ))
+                .send(Event::NextDate)
                 .expect("Sending message to background thread");
         });
     }
 
-    pub fn connect_time_entry_signals(ui: &Rc<Ui>,
-            to_foreground: &glib::Sender<background::Event>) {
+    pub fn connect_time_entry_signals(
+        ui: &Rc<Ui>,
+        to_foreground: &glib::Sender<background::Event>,
+    ) {
         for time_entry_row in ui.time_entries.borrow().iter() {
             if time_entry_row.time_entry.borrow().is_running {
                 let time_entries_ref = Rc::clone(&ui.time_entries);
@@ -336,22 +335,25 @@ impl Ui {
             let to_background_clone = ui.to_background.clone();
             let is_running = time_entry_row.time_entry.borrow().is_running;
             let id = time_entry_row.time_entry.borrow().id;
-            time_entry_row.start_stop_button.connect_clicked(move |_button| {
-                if is_running {
-                    to_background_clone
-                        .send(Event::StopTimer(id))
-                        .expect("Sending message to background thread");
-                } else {
-                    to_background_clone
-                        .send(Event::RestartTimer(id))
-                        .expect("Sending message to background thread");
-                }
-            });
+            time_entry_row
+                .start_stop_button
+                .connect_clicked(move |_button| {
+                    if is_running {
+                        to_background_clone
+                            .send(Event::StopTimer(id))
+                            .expect("Sending message to background thread");
+                    } else {
+                        to_background_clone
+                            .send(Event::RestartTimer(id))
+                            .expect("Sending message to background thread");
+                    }
+                });
 
             let time_entry_id = time_entry_row.time_entry.borrow().id;
             let to_foreground = to_foreground.clone();
             time_entry_row.edit_button.connect_clicked(move |_button| {
-                to_foreground.send(background::Event::OpenPopup(time_entry_id))
+                to_foreground
+                    .send(background::Event::OpenPopup(time_entry_id))
                     .expect("Sending message to foreground");
             });
         }
@@ -445,14 +447,6 @@ impl Ui {
         total_label.set_use_markup(true);
         grid.attach(&total_label, 0, total_entries + 1, 1, 1);
         Ui::update_total_amount(&self.total_amount_label, total_hours);
-
-        let title = format!("Harvest - {}", self.for_date.borrow().format("%a %-d %b"));
-        self.main_window
-            .get_titlebar()
-            .unwrap()
-            .downcast::<gtk::HeaderBar>()
-            .unwrap()
-            .set_title(Some(&title));
 
         match self.main_window.get_children().first() {
             Some(child) => {
