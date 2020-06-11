@@ -18,7 +18,6 @@ impl App {
     }
 
     pub fn run(app: App) {
-        println!("App started");
         thread::spawn(move || for signal in app.from_ui {});
     }
 }
