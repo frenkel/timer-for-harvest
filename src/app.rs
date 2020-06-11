@@ -2,7 +2,12 @@ use crate::ui;
 use std::sync::mpsc;
 use std::thread;
 
-pub enum Signal {}
+pub enum Signal {
+    RetrieveTimeEntries,
+    OpenPopup,
+    PrevDate,
+    NextDate,
+}
 
 pub struct App {
     from_ui: mpsc::Receiver<Signal>,
