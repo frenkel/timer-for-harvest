@@ -23,6 +23,15 @@ impl App {
     }
 
     pub fn run(app: App) {
-        thread::spawn(move || for signal in app.from_ui {});
+        thread::spawn(move || {
+            for signal in app.from_ui {
+                match signal {
+                    Signal::RetrieveTimeEntries => {},
+                    Signal::OpenPopup => {},
+                    Signal::PrevDate => {},
+                    Signal::NextDate => {},
+                }
+            }
+        });
     }
 }
