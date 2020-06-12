@@ -298,7 +298,7 @@ impl Harvest {
         project_assignments
     }
 
-    pub fn time_entries_for(&self, user: User, from: String, till: String) -> Vec<TimeEntry> {
+    pub fn time_entries_for(&self, user: &User, from: String, till: String) -> Vec<TimeEntry> {
         let url = format!(
             "https://api.harvestapp.com/v2/time_entries?user_id={}&from={}&to={}",
             user.id, from, till
