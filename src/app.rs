@@ -10,23 +10,24 @@ pub enum Signal {
 }
 
 pub struct App {
-    from_ui: mpsc::Receiver<Signal>,
     to_ui: glib::Sender<ui::Signal>,
 }
 
 impl App {
-    pub fn new(from_ui: mpsc::Receiver<Signal>, to_ui: glib::Sender<ui::Signal>) -> App {
+    pub fn new(to_ui: glib::Sender<ui::Signal>) -> App {
         App {
-            from_ui: from_ui,
             to_ui: to_ui,
         }
     }
 
-    pub fn run(app: App) {
+    pub fn handle_ui_signals(app: App, from_ui: mpsc::Receiver<Signal>) {
         thread::spawn(move || {
-            for signal in app.from_ui {
+            for signal in from_ui {
                 match signal {
-                    Signal::RetrieveTimeEntries => {},
+                    Signal::RetrieveTimeEntries => {
+                        app.to_ui.send(ui::Signal::SetTitle("Loading...".to_string()))
+                            .expect("Sending message to ui thread");
+                    },
                     Signal::OpenPopup => {},
                     Signal::PrevDate => {},
                     Signal::NextDate => {},

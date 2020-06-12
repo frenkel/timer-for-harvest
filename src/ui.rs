@@ -21,50 +21,59 @@ macro_rules! clone {
     );
 }
 
-pub enum Signal {}
+pub enum Signal {
+    SetTitle(String)
+}
 
 pub struct Ui {
-    from_app: glib::Receiver<Signal>,
-    to_app: mpsc::Sender<app::Signal>,
     application: gtk::Application,
+    header_bar: gtk::HeaderBar,
 }
 
 impl Ui {
-    pub fn new(from_app: glib::Receiver<Signal>, to_app: mpsc::Sender<app::Signal>) -> Ui {
+    pub fn new(to_app: mpsc::Sender<app::Signal>) -> Ui {
         let application = gtk::Application::new(
             Some("nl.frankgroeneveld.timer-for-harvest"),
             Default::default(),
         )
         .unwrap();
+        let header_bar = gtk::HeaderBar::new();
+
+        application.connect_activate(clone!(to_app, header_bar => move |app| {
+            Ui::main_window(app, &to_app, &header_bar);
+        }));
+
         Ui {
-            from_app: from_app,
-            to_app: to_app,
             application: application,
+            header_bar: header_bar,
         }
     }
 
-    pub fn run(ui: Ui) {
-        let to_app = ui.to_app.clone();
-        ui.application.connect_activate(move |application| {
-            let window = Ui::main_window(application, &to_app);
+    pub fn handle_app_signals(ui: Ui, from_app: glib::Receiver<Signal>) {
+        let application = ui.application.clone();
+        from_app.attach(None, move |signal| {
+            match signal {
+                Signal::SetTitle(value) => {
+                    ui.header_bar.set_title(Some(&value));
+                }
+            }
+            glib::Continue(true)
         });
-
-        ui.from_app.attach(None, move |event| glib::Continue(true));
-        ui.application.run(&[]);
+        application.run(&[]);
     }
 
     pub fn main_window(
         application: &gtk::Application,
         to_app: &mpsc::Sender<app::Signal>,
+        header_bar: &gtk::HeaderBar,
     ) -> gtk::ApplicationWindow {
         let window = gtk::ApplicationWindow::new(application);
-        let container = gtk::HeaderBar::new();
 
-        container.set_title(Some("Harvest"));
-        container.set_show_close_button(true);
+        header_bar.set_title(Some("Harvest"));
+        header_bar.set_show_close_button(true);
 
         window.set_title("Harvest");
-        window.set_titlebar(Some(&container));
+        window.set_titlebar(Some(header_bar));
         window.set_border_width(18);
         window.set_position(gtk::WindowPosition::Center);
         window.set_default_size(500, 300);
@@ -88,7 +97,7 @@ impl Ui {
         let button =
             gtk::Button::new_from_icon_name(Some("list-add-symbolic"), gtk::IconSize::Button);
         button.set_sensitive(false);
-        container.pack_start(&button);
+        header_bar.pack_start(&button);
         button.connect_clicked(clone!(to_app => move |_button| {
             to_app.send(app::Signal::OpenPopup)
                 .expect("Sending message to application thread");
@@ -108,7 +117,7 @@ impl Ui {
         let next_button =
             gtk::Button::new_from_icon_name(Some("go-next-symbolic"), gtk::IconSize::Button);
         hbox.pack_start(&next_button, false, false, 0);
-        container.pack_start(&hbox);
+        header_bar.pack_start(&hbox);
         next_button.connect_clicked(clone!(to_app => move |_button| {
             to_app.send(app::Signal::NextDate)
                 .expect("Sending message to application thread");

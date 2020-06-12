@@ -16,10 +16,11 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (to_ui, from_app) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
         let (to_app, from_ui) = mpsc::channel();
 
-        let app = App::new(from_ui, to_ui);
-        let ui = Ui::new(from_app, to_app);
-        App::run(app);
-        Ui::run(ui);
+        let app = App::new(to_ui);
+        let ui = Ui::new(to_app);
+
+        App::handle_ui_signals(app, from_ui);
+        Ui::handle_app_signals(ui, from_app);
     }
 
     Ok(())
