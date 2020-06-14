@@ -166,6 +166,41 @@ impl Ui {
             project_label.set_hexpand(true);
             self.grid.attach(&project_label, 0, row_number, 1, 1);
 
+            let hours_label = gtk::Label::new(Some(&f32_to_duration_str(time_entry.hours)));
+            hours_label.set_xalign(0.0);
+            self.grid.attach(&hours_label, 1, row_number, 1, 1);
+
+            let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 2);
+            hbox.set_spacing(0);
+            hbox.get_style_context().add_class(&gtk::STYLE_CLASS_LINKED);
+
+            let button: gtk::Button;
+            if time_entry.is_running {
+                button = gtk::Button::new_from_icon_name(
+                    Some("media-playback-stop-symbolic"),
+                    gtk::IconSize::Button,
+                );
+                button
+                    .get_style_context()
+                    .add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
+            } else {
+                button = gtk::Button::new_from_icon_name(
+                    Some("media-playback-start-symbolic"),
+                    gtk::IconSize::Button,
+                );
+            };
+            button.set_valign(gtk::Align::Center);
+            hbox.pack_start(&button, false, false, 0);
+
+            let edit_button = gtk::Button::new_from_icon_name(
+                Some("document-edit-symbolic"),
+                gtk::IconSize::Button,
+            );
+            edit_button.set_valign(gtk::Align::Center);
+            hbox.pack_start(&edit_button, false, false, 0);
+
+            self.grid.attach(&hbox, 2, row_number, 1, 1);
+
             row_number -= 1;
         }
 
