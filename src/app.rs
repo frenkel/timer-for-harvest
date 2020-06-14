@@ -36,26 +36,16 @@ impl App {
             for signal in from_ui {
                 match signal {
                     Signal::RetrieveTimeEntries => {
-                        app.to_ui.send(ui::Signal::SetTitle("Loading...".to_string()))
-                            .expect("Sending message to ui thread");
-                        let time_entries = app.api.time_entries_for(
-                            &app.user,
-                            app.shown_date.to_string(),
-                            app.shown_date.to_string(),
-                        );
-
-                        app.to_ui.send(ui::Signal::SetTimeEntries(time_entries))
-                            .expect("Sending message to ui thread");
-                        app.format_and_send_title();
+                        app.retrieve_time_entries();
                     },
                     Signal::OpenPopup => {},
                     Signal::PrevDate => {
                         app.shown_date = app.shown_date.pred();
-                        app.format_and_send_title();
+                        app.retrieve_time_entries();
                     },
                     Signal::NextDate => {
                         app.shown_date = app.shown_date.succ();
-                        app.format_and_send_title();
+                        app.retrieve_time_entries();
                     },
                 }
             }
@@ -66,5 +56,19 @@ impl App {
         let title = format!("Harvest - {}", self.shown_date.format("%a %-d %b"));
         self.to_ui.send(ui::Signal::SetTitle(title))
             .expect("Sending message to ui thread");
+    }
+
+    fn retrieve_time_entries(&self) {
+        self.to_ui.send(ui::Signal::SetTitle("Loading...".to_string()))
+            .expect("Sending message to ui thread");
+        let time_entries = self.api.time_entries_for(
+            &self.user,
+            self.shown_date.to_string(),
+            self.shown_date.to_string(),
+        );
+
+        self.to_ui.send(ui::Signal::SetTimeEntries(time_entries))
+            .expect("Sending message to ui thread");
+        self.format_and_send_title();
     }
 }
