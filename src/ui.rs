@@ -197,7 +197,8 @@ impl Ui {
                 button
                     .get_style_context()
                     .add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
-                button.connect_clicked(move |_button| {
+                button.connect_clicked(move |button| {
+                    button.set_sensitive(false);
                     to_app.send(app::Signal::StopTimeEntry(id))
                         .expect("Sending message to application thread");
                 });
@@ -206,7 +207,8 @@ impl Ui {
                     Some("media-playback-start-symbolic"),
                     gtk::IconSize::Button,
                 );
-                button.connect_clicked(move |_button| {
+                button.connect_clicked(move |button| {
+                    button.set_sensitive(false);
                     to_app.send(app::Signal::RestartTimeEntry(id))
                         .expect("Sending message to application thread");
                 });
