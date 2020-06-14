@@ -142,9 +142,16 @@ impl Ui {
 
     pub fn set_time_entries(&self, time_entries: Vec<TimeEntry>) {
         let total_entries = time_entries.len() as i32;
+        let mut total_hours = 0.0;
         let mut row_number = total_entries;
 
+        for child in self.grid.get_children() {
+            self.grid.remove(&child);
+        }
+
         for time_entry in time_entries {
+            total_hours += time_entry.hours;
+
             let notes = match time_entry.notes.as_ref() {
                 Some(n) => n
                     .replace("&", "&amp;")
@@ -203,6 +210,17 @@ impl Ui {
 
             row_number -= 1;
         }
+
+        let total_label = gtk::Label::new(Some(&"<b>Total</b>"));
+        total_label.set_xalign(0.0);
+        total_label.set_use_markup(true);
+        self.grid.attach(&total_label, 0, total_entries + 1, 1, 1);
+
+        let formatted_label = format!("<b>{}</b>", f32_to_duration_str(total_hours));
+        let total_amount_label = gtk::Label::new(Some(&formatted_label));
+        total_amount_label.set_xalign(0.0);
+        total_amount_label.set_use_markup(true);
+        self.grid.attach(&total_amount_label, 1, total_entries + 1, 1, 1);
 
         self.grid.show_all();
     }
