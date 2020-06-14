@@ -49,6 +49,9 @@ impl Ui {
             Ui::main_window(app, &to_app, &header_bar, &grid);
         }));
 
+        to_app.send(app::Signal::RetrieveTimeEntries)
+            .expect("Sending message to application thread");
+
         Ui {
             application: application,
             header_bar: header_bar,
