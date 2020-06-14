@@ -38,11 +38,15 @@ impl App {
                     Signal::RetrieveTimeEntries => {
                         app.to_ui.send(ui::Signal::SetTitle("Loading...".to_string()))
                             .expect("Sending message to ui thread");
-                        app.api.time_entries_for(
+                        let time_entries = app.api.time_entries_for(
                             &app.user,
                             app.shown_date.to_string(),
                             app.shown_date.to_string(),
                         );
+
+                        app.to_ui.send(ui::Signal::SetTimeEntries(time_entries))
+                            .expect("Sending message to ui thread");
+                        app.format_and_send_title();
                     },
                     Signal::OpenPopup => {},
                     Signal::PrevDate => {

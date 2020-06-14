@@ -2,6 +2,7 @@ use crate::app;
 use gio::prelude::*;
 use gtk::prelude::*;
 use std::sync::mpsc;
+use timer_for_harvest::*;
 
 /* handy gtk callback clone macro taken from https://gtk-rs.org/docs-src/tutorial/closures */
 macro_rules! clone {
@@ -22,12 +23,14 @@ macro_rules! clone {
 }
 
 pub enum Signal {
-    SetTitle(String)
+    SetTitle(String),
+    SetTimeEntries(Vec<TimeEntry>),
 }
 
 pub struct Ui {
     application: gtk::Application,
     header_bar: gtk::HeaderBar,
+    grid: gtk::Grid,
 }
 
 impl Ui {
@@ -38,14 +41,18 @@ impl Ui {
         )
         .unwrap();
         let header_bar = gtk::HeaderBar::new();
+        let grid = gtk::Grid::new();
+        grid.set_column_spacing(12);
+        grid.set_row_spacing(18);
 
-        application.connect_activate(clone!(to_app, header_bar => move |app| {
-            Ui::main_window(app, &to_app, &header_bar);
+        application.connect_activate(clone!(to_app, header_bar, grid => move |app| {
+            Ui::main_window(app, &to_app, &header_bar, &grid);
         }));
 
         Ui {
             application: application,
             header_bar: header_bar,
+            grid: grid,
         }
     }
 
@@ -55,7 +62,10 @@ impl Ui {
             match signal {
                 Signal::SetTitle(value) => {
                     ui.header_bar.set_title(Some(&value));
-                }
+                },
+                Signal::SetTimeEntries(time_entries) => {
+                    ui.set_time_entries(time_entries);
+                },
             }
             glib::Continue(true)
         });
@@ -66,6 +76,7 @@ impl Ui {
         application: &gtk::Application,
         to_app: &mpsc::Sender<app::Signal>,
         header_bar: &gtk::HeaderBar,
+        grid: &gtk::Grid,
     ) -> gtk::ApplicationWindow {
         let window = gtk::ApplicationWindow::new(application);
 
@@ -123,8 +134,41 @@ impl Ui {
                 .expect("Sending message to application thread");
         }));
 
+        window.add(grid);
         window.show_all();
 
         window
+    }
+
+    pub fn set_time_entries(&self, time_entries: Vec<TimeEntry>) {
+        let total_entries = time_entries.len() as i32;
+        let mut row_number = total_entries;
+
+        for time_entry in time_entries {
+            let notes = match time_entry.notes.as_ref() {
+                Some(n) => n
+                    .replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;"),
+                None => "".to_string(),
+            };
+            let project_client = format!(
+                "<b>{}</b> ({})\n{} - {}",
+                &time_entry.project.name_and_code(),
+                &time_entry.client.name,
+                &time_entry.task.name,
+                &notes
+            );
+            let project_label = gtk::Label::new(Some(&project_client));
+            project_label.set_xalign(0.0);
+            project_label.set_line_wrap(true);
+            project_label.set_use_markup(true);
+            project_label.set_hexpand(true);
+            self.grid.attach(&project_label, 0, row_number, 1, 1);
+
+            row_number -= 1;
+        }
+
+        self.grid.show_all();
     }
 }
