@@ -1,9 +1,9 @@
 use crate::app;
+use crate::popup::Popup;
 use gio::prelude::*;
 use gtk::prelude::*;
 use std::sync::mpsc;
 use timer_for_harvest::*;
-use crate::popup::Popup;
 
 /* handy gtk callback clone macro taken from https://gtk-rs.org/docs-src/tutorial/closures */
 macro_rules! clone {
@@ -53,7 +53,8 @@ impl Ui {
             Ui::main_window(app, &to_app, &header_bar, &grid);
         }));
 
-        to_app.send(app::Signal::RetrieveTimeEntries)
+        to_app
+            .send(app::Signal::RetrieveTimeEntries)
             .expect("Sending message to application thread");
 
         Ui {
@@ -71,10 +72,10 @@ impl Ui {
             match signal {
                 Signal::SetTitle(value) => {
                     ui.header_bar.set_title(Some(&value));
-                },
+                }
                 Signal::SetTimeEntries(time_entries) => {
                     ui.set_time_entries(time_entries);
-                },
+                }
                 Signal::OpenPopup(project_assignments) => {
                     ui.open_popup(project_assignments);
                 }
@@ -206,7 +207,8 @@ impl Ui {
                     .add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
                 button.connect_clicked(move |button| {
                     button.set_sensitive(false);
-                    to_app.send(app::Signal::StopTimeEntry(id))
+                    to_app
+                        .send(app::Signal::StopTimeEntry(id))
                         .expect("Sending message to application thread");
                 });
             } else {
@@ -216,7 +218,8 @@ impl Ui {
                 );
                 button.connect_clicked(move |button| {
                     button.set_sensitive(false);
-                    to_app.send(app::Signal::RestartTimeEntry(id))
+                    to_app
+                        .send(app::Signal::RestartTimeEntry(id))
                         .expect("Sending message to application thread");
                 });
             };
@@ -231,7 +234,8 @@ impl Ui {
             let to_app = self.to_app.clone();
             let id = time_entry.id;
             edit_button.connect_clicked(move |_button| {
-                to_app.send(app::Signal::EditTimeEntry(id))
+                to_app
+                    .send(app::Signal::EditTimeEntry(id))
                     .expect("Sending message to application thread");
             });
             hbox.pack_start(&edit_button, false, false, 0);
@@ -250,11 +254,12 @@ impl Ui {
         let total_amount_label = gtk::Label::new(Some(&formatted_label));
         total_amount_label.set_xalign(0.0);
         total_amount_label.set_use_markup(true);
-        self.grid.attach(&total_amount_label, 1, total_entries + 1, 1, 1);
+        self.grid
+            .attach(&total_amount_label, 1, total_entries + 1, 1, 1);
 
         self.grid.show_all();
     }
-    
+
     fn open_popup(&mut self, project_assignments: Vec<ProjectAssignment>) {
         self.popup = Some(Popup::new(&self.application, project_assignments));
     }

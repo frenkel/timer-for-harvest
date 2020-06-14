@@ -26,7 +26,10 @@ pub struct Popup {
 }
 
 impl Popup {
-    pub fn new(application: &gtk::Application, project_assignments: Vec<ProjectAssignment>) -> Popup {
+    pub fn new(
+        application: &gtk::Application,
+        project_assignments: Vec<ProjectAssignment>,
+    ) -> Popup {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
 
         window.set_title("Add time entry");
@@ -51,7 +54,7 @@ impl Popup {
 
         window.show_all();
 
-        let task_assignments = vec!();
+        let task_assignments = vec![];
         let popup = Popup {
             window: window,
             project_chooser: Popup::project_chooser(project_assignments),
@@ -79,17 +82,19 @@ impl Popup {
         project_chooser.connect_changed(move |project_chooser| {
             match project_chooser.get_active() {
                 Some(index) => {
-                    let iter = project_chooser.get_model()
+                    let iter = project_chooser
+                        .get_model()
                         .unwrap()
                         .get_iter_from_string(&format!("{}", index))
                         .unwrap();
-                    let id = project_chooser.get_model()
+                    let id = project_chooser
+                        .get_model()
                         .unwrap()
                         .get_value(&iter, 1)
                         .get::<u32>()
                         .unwrap();
                     println!("{}", id);
-                },
+                }
                 None => {}
             }
         });
@@ -162,6 +167,7 @@ impl Popup {
             .set_property("activates-default", &true)
             .expect("could not allow default activation");
         grid.attach(&hour_input, 2, 2, 2, 1);
+        /* TODO disable when edit running timer */
 
         let delete_button = gtk::Button::new();
         delete_button.set_label("Delete");
@@ -170,6 +176,7 @@ impl Popup {
         let save_button = gtk::Button::new();
         save_button.set_can_default(true);
         save_button.set_label("Start Timer");
+        /* TODO change label when edit running timer */
         grid.attach(&save_button, 2, 3, 2, 1);
 
         grid.show_all();

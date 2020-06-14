@@ -1,6 +1,6 @@
 mod app;
-mod ui;
 mod popup;
+mod ui;
 
 use app::App;
 use std::env::args;
