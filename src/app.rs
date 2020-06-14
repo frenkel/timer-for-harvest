@@ -5,7 +5,10 @@ use timer_for_harvest::*;
 
 pub enum Signal {
     RetrieveTimeEntries,
-    OpenPopup,
+    NewTimeEntry,
+    EditTimeEntry(u32),
+    RestartTimeEntry(u32),
+    StopTimeEntry(u32),
     PrevDate,
     NextDate,
 }
@@ -38,7 +41,10 @@ impl App {
                     Signal::RetrieveTimeEntries => {
                         app.retrieve_time_entries();
                     },
-                    Signal::OpenPopup => {},
+                    Signal::NewTimeEntry => {},
+                    Signal::EditTimeEntry(id) => {},
+                    Signal::RestartTimeEntry(id) => {},
+                    Signal::StopTimeEntry(id) => {},
                     Signal::PrevDate => {
                         app.shown_date = app.shown_date.pred();
                         app.retrieve_time_entries();

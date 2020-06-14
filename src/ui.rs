@@ -31,6 +31,7 @@ pub struct Ui {
     application: gtk::Application,
     header_bar: gtk::HeaderBar,
     grid: gtk::Grid,
+    to_app: mpsc::Sender<app::Signal>,
 }
 
 impl Ui {
@@ -56,6 +57,7 @@ impl Ui {
             application: application,
             header_bar: header_bar,
             grid: grid,
+            to_app: to_app,
         }
     }
 
@@ -100,7 +102,7 @@ impl Ui {
                     .expect("Sending message to application thread");
                 Inhibit(true)
             } else if event.get_keyval() == gdk::enums::key::n {
-                to_app.send(app::Signal::OpenPopup)
+                to_app.send(app::Signal::NewTimeEntry)
                     .expect("Sending message to application thread");
                 Inhibit(true)
             } else {
@@ -113,7 +115,7 @@ impl Ui {
         button.set_sensitive(false);
         header_bar.pack_start(&button);
         button.connect_clicked(clone!(to_app => move |_button| {
-            to_app.send(app::Signal::OpenPopup)
+            to_app.send(app::Signal::NewTimeEntry)
                 .expect("Sending message to application thread");
         }));
 
@@ -185,6 +187,8 @@ impl Ui {
             hbox.get_style_context().add_class(&gtk::STYLE_CLASS_LINKED);
 
             let button: gtk::Button;
+            let to_app = self.to_app.clone();
+            let id = time_entry.id;
             if time_entry.is_running {
                 button = gtk::Button::new_from_icon_name(
                     Some("media-playback-stop-symbolic"),
@@ -193,11 +197,19 @@ impl Ui {
                 button
                     .get_style_context()
                     .add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
+                button.connect_clicked(move |_button| {
+                    to_app.send(app::Signal::StopTimeEntry(id))
+                        .expect("Sending message to application thread");
+                });
             } else {
                 button = gtk::Button::new_from_icon_name(
                     Some("media-playback-start-symbolic"),
                     gtk::IconSize::Button,
                 );
+                button.connect_clicked(move |_button| {
+                    to_app.send(app::Signal::RestartTimeEntry(id))
+                        .expect("Sending message to application thread");
+                });
             };
             button.set_valign(gtk::Align::Center);
             hbox.pack_start(&button, false, false, 0);
@@ -207,6 +219,12 @@ impl Ui {
                 gtk::IconSize::Button,
             );
             edit_button.set_valign(gtk::Align::Center);
+            let to_app = self.to_app.clone();
+            let id = time_entry.id;
+            edit_button.connect_clicked(move |_button| {
+                to_app.send(app::Signal::EditTimeEntry(id))
+                    .expect("Sending message to application thread");
+            });
             hbox.pack_start(&edit_button, false, false, 0);
 
             self.grid.attach(&hbox, 2, row_number, 1, 1);
