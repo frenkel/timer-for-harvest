@@ -3,6 +3,7 @@ use gio::prelude::*;
 use gtk::prelude::*;
 use std::sync::mpsc;
 use timer_for_harvest::*;
+use crate::popup::Popup;
 
 /* handy gtk callback clone macro taken from https://gtk-rs.org/docs-src/tutorial/closures */
 macro_rules! clone {
@@ -25,6 +26,7 @@ macro_rules! clone {
 pub enum Signal {
     SetTitle(String),
     SetTimeEntries(Vec<TimeEntry>),
+    OpenPopup,
 }
 
 pub struct Ui {
@@ -71,6 +73,9 @@ impl Ui {
                 Signal::SetTimeEntries(time_entries) => {
                     ui.set_time_entries(time_entries);
                 },
+                Signal::OpenPopup => {
+                    ui.open_popup();
+                }
             }
             glib::Continue(true)
         });
@@ -246,5 +251,9 @@ impl Ui {
         self.grid.attach(&total_amount_label, 1, total_entries + 1, 1, 1);
 
         self.grid.show_all();
+    }
+    
+    fn open_popup(&self) {
+        Popup::new(&self.application);
     }
 }

@@ -41,7 +41,10 @@ impl App {
                     Signal::RetrieveTimeEntries => {
                         app.retrieve_time_entries();
                     },
-                    Signal::NewTimeEntry => {},
+                    Signal::NewTimeEntry => {
+                        app.to_ui.send(ui::Signal::OpenPopup)
+                            .expect("Sending message to ui thread");
+                    },
                     Signal::EditTimeEntry(id) => {},
                     Signal::RestartTimeEntry(id) => {
                         app.restart_timer(id);
