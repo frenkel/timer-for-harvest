@@ -1,4 +1,5 @@
 use gtk::prelude::*;
+use timer_for_harvest::*;
 
 /* handy gtk callback clone macro taken from https://gtk-rs.org/docs-src/tutorial/closures */
 macro_rules! clone {
@@ -20,10 +21,12 @@ macro_rules! clone {
 
 pub struct Popup {
     window: gtk::Window,
+    project_chooser: gtk::ComboBox,
+    task_chooser: gtk::ComboBox,
 }
 
 impl Popup {
-    pub fn new(application: &gtk::Application) -> Popup {
+    pub fn new(application: &gtk::Application, project_assignments: Vec<ProjectAssignment>) -> Popup {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
 
         window.set_title("Add time entry");
@@ -48,20 +51,19 @@ impl Popup {
 
         window.show_all();
 
-        let popup = Popup { window: window };
+        let task_assignments = vec!();
+        let popup = Popup {
+            window: window,
+            project_chooser: Popup::project_chooser(project_assignments),
+            task_chooser: Popup::task_chooser(task_assignments),
+        };
         popup.fill_grid();
         popup
     }
 
-    fn fill_grid(&self) {
-        let grid = gtk::Grid::new();
-        grid.set_column_spacing(12);
-        grid.set_row_spacing(18);
-
-        self.window.add(&grid);
-
+    fn project_chooser(project_assignments: Vec<ProjectAssignment>) -> gtk::ComboBox {
         let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
-        /*for project_assignment in project_assignments.borrow().iter() {
+        for project_assignment in project_assignments {
             project_store.set(
                 &project_store.append(),
                 &[0, 1],
@@ -70,9 +72,27 @@ impl Popup {
                     &project_assignment.project.id,
                 ],
             );
-        }*/
+        }
         let project_chooser = gtk::ComboBox::new_with_model_and_entry(&project_store);
+
         project_chooser.set_entry_text_column(0);
+        project_chooser.connect_changed(move |project_chooser| {
+            match project_chooser.get_active() {
+                Some(index) => {
+                    let iter = project_chooser.get_model()
+                        .unwrap()
+                        .get_iter_from_string(&format!("{}", index))
+                        .unwrap();
+                    let id = project_chooser.get_model()
+                        .unwrap()
+                        .get_value(&iter, 1)
+                        .get::<u32>()
+                        .unwrap();
+                    println!("{}", id);
+                },
+                None => {}
+            }
+        });
 
         let project_completer = gtk::EntryCompletion::new();
         project_completer.set_model(Some(&project_store));
@@ -91,8 +111,11 @@ impl Popup {
             .unwrap()
             .set_completion(Some(&project_completer));
         project_chooser.set_hexpand(true);
-        grid.attach(&project_chooser, 0, 0, 4, 1);
 
+        project_chooser
+    }
+
+    fn task_chooser(task_assignments: Vec<TaskAssignment>) -> gtk::ComboBox {
         let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
         let task_chooser = gtk::ComboBox::new_with_model_and_entry(&task_store);
         task_chooser.set_entry_text_column(0);
@@ -114,7 +137,19 @@ impl Popup {
             .downcast::<gtk::Entry>()
             .unwrap()
             .set_completion(Some(&task_completer));
-        grid.attach(&task_chooser, 0, 1, 4, 1);
+        task_chooser
+    }
+
+    fn fill_grid(&self) {
+        let grid = gtk::Grid::new();
+        grid.set_column_spacing(12);
+        grid.set_row_spacing(18);
+
+        self.window.add(&grid);
+
+        grid.attach(&self.project_chooser, 0, 0, 4, 1);
+
+        grid.attach(&self.task_chooser, 0, 1, 4, 1);
 
         let notes_input = gtk::Entry::new();
         notes_input

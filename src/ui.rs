@@ -26,7 +26,7 @@ macro_rules! clone {
 pub enum Signal {
     SetTitle(String),
     SetTimeEntries(Vec<TimeEntry>),
-    OpenPopup,
+    OpenPopup(Vec<ProjectAssignment>),
 }
 
 pub struct Ui {
@@ -34,6 +34,7 @@ pub struct Ui {
     header_bar: gtk::HeaderBar,
     grid: gtk::Grid,
     to_app: mpsc::Sender<app::Signal>,
+    popup: Option<Popup>,
 }
 
 impl Ui {
@@ -60,10 +61,11 @@ impl Ui {
             header_bar: header_bar,
             grid: grid,
             to_app: to_app,
+            popup: None,
         }
     }
 
-    pub fn handle_app_signals(ui: Ui, from_app: glib::Receiver<Signal>) {
+    pub fn handle_app_signals(mut ui: Ui, from_app: glib::Receiver<Signal>) {
         let application = ui.application.clone();
         from_app.attach(None, move |signal| {
             match signal {
@@ -73,8 +75,8 @@ impl Ui {
                 Signal::SetTimeEntries(time_entries) => {
                     ui.set_time_entries(time_entries);
                 },
-                Signal::OpenPopup => {
-                    ui.open_popup();
+                Signal::OpenPopup(project_assignments) => {
+                    ui.open_popup(project_assignments);
                 }
             }
             glib::Continue(true)
@@ -253,7 +255,7 @@ impl Ui {
         self.grid.show_all();
     }
     
-    fn open_popup(&self) {
-        Popup::new(&self.application);
+    fn open_popup(&mut self, project_assignments: Vec<ProjectAssignment>) {
+        self.popup = Some(Popup::new(&self.application, project_assignments));
     }
 }

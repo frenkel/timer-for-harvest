@@ -18,6 +18,7 @@ pub struct App {
     shown_date: chrono::NaiveDate,
     api: Harvest,
     user: User,
+    project_assignments: Vec<ProjectAssignment>,
 }
 
 impl App {
@@ -25,12 +26,20 @@ impl App {
         let now = chrono::Local::today().naive_local();
         let api = Harvest::new();
         let user = api.current_user();
+        let mut project_assignments = api.active_project_assignments();
+        project_assignments.sort_by(|a, b| {
+            a.project
+                .name
+                .to_lowercase()
+                .cmp(&b.project.name.to_lowercase())
+        });
 
         App {
             to_ui: to_ui,
             shown_date: now,
             api: api,
             user: user,
+            project_assignments: project_assignments,
         }
     }
 
@@ -42,7 +51,7 @@ impl App {
                         app.retrieve_time_entries();
                     },
                     Signal::NewTimeEntry => {
-                        app.to_ui.send(ui::Signal::OpenPopup)
+                        app.to_ui.send(ui::Signal::OpenPopup(app.project_assignments.to_vec()))
                             .expect("Sending message to ui thread");
                     },
                     Signal::EditTimeEntry(id) => {},

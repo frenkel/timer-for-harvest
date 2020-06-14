@@ -20,7 +20,7 @@ pub struct Harvest {
     expires_at: u64,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Project {
     pub id: u32,
     pub name: String,
@@ -28,26 +28,26 @@ pub struct Project {
     pub client: Option<Client>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct ProjectAssignment {
     pub id: u32,
     pub project: Project,
     pub task_assignments: Vec<TaskAssignment>,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Client {
     pub id: u32,
     pub name: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct Task {
     pub id: u32,
     pub name: String,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct TaskAssignment {
     pub id: u32,
     pub task: Task,
