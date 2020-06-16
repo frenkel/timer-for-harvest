@@ -27,6 +27,7 @@ pub enum Signal {
     SetTitle(String),
     SetTimeEntries(Vec<TimeEntry>),
     OpenPopup(Vec<ProjectAssignment>),
+    OpenPopupWithTimeEntry(Vec<ProjectAssignment>, TimeEntry),
     TaskAssignments(Vec<TaskAssignment>),
 }
 
@@ -79,6 +80,17 @@ impl Ui {
                 }
                 Signal::OpenPopup(project_assignments) => {
                     ui.open_popup(project_assignments);
+                }
+                Signal::OpenPopupWithTimeEntry(project_assignments, time_entry) => {
+                    let mut task_assignments = vec![];
+                    for project_assignment in &project_assignments {
+                        if project_assignment.project.id == time_entry.id {
+                            task_assignments = project_assignment.task_assignments.clone();
+                            break;
+                        }
+                    }
+                    ui.open_popup(project_assignments);
+                    ui.populate_popup(task_assignments, time_entry);
                 }
                 Signal::TaskAssignments(task_assignments) => {
                     ui.load_tasks(task_assignments);
@@ -270,6 +282,13 @@ impl Ui {
             project_assignments,
             self.to_app.clone(),
         ));
+    }
+
+    fn populate_popup(&self, task_assignments: Vec<TaskAssignment>, time_entry: TimeEntry) {
+        match &self.popup {
+            Some(popup) => popup.populate(task_assignments, time_entry),
+            None => {}
+        }
     }
 
     fn load_tasks(&self, task_assignments: Vec<TaskAssignment>) {

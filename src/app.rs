@@ -21,6 +21,7 @@ pub struct App {
     api: Harvest,
     user: User,
     project_assignments: Vec<ProjectAssignment>,
+    time_entries: Vec<TimeEntry>,
 }
 
 impl App {
@@ -42,6 +43,7 @@ impl App {
             api: api,
             user: user,
             project_assignments: project_assignments,
+            time_entries: vec![],
         }
     }
 
@@ -57,12 +59,16 @@ impl App {
                             .send(ui::Signal::OpenPopup(app.project_assignments.to_vec()))
                             .expect("Sending message to ui thread");
                     }
-                    Signal::EditTimeEntry(id) => {}
+                    Signal::EditTimeEntry(id) => {
+                        app.edit_time_entry(id);
+                    }
                     Signal::RestartTimeEntry(id) => {
                         app.restart_timer(id);
+                        app.retrieve_time_entries();
                     }
                     Signal::StopTimeEntry(id) => {
                         app.stop_timer(id);
+                        app.retrieve_time_entries();
                     }
                     Signal::PrevDate => {
                         app.shown_date = app.shown_date.pred();
@@ -90,18 +96,18 @@ impl App {
             .expect("Sending message to ui thread");
     }
 
-    fn retrieve_time_entries(&self) {
+    fn retrieve_time_entries(&mut self) {
         self.to_ui
             .send(ui::Signal::SetTitle("Loading...".to_string()))
             .expect("Sending message to ui thread");
-        let time_entries = self.api.time_entries_for(
+        self.time_entries = self.api.time_entries_for(
             &self.user,
             self.shown_date.to_string(),
             self.shown_date.to_string(),
         );
 
         self.to_ui
-            .send(ui::Signal::SetTimeEntries(time_entries))
+            .send(ui::Signal::SetTimeEntries(self.time_entries.clone()))
             .expect("Sending message to ui thread");
         self.format_and_send_title();
     }
@@ -111,7 +117,6 @@ impl App {
             .send(ui::Signal::SetTitle("Loading...".to_string()))
             .expect("Sending message to ui thread");
         self.api.restart_timer(id);
-        self.retrieve_time_entries();
     }
 
     fn stop_timer(&self, id: u32) {
@@ -119,7 +124,6 @@ impl App {
             .send(ui::Signal::SetTitle("Loading...".to_string()))
             .expect("Sending message to ui thread");
         self.api.stop_timer(id);
-        self.retrieve_time_entries();
     }
 
     fn retrieve_tasks_for_project(&self, id: u32) {
@@ -137,5 +141,18 @@ impl App {
 
     fn start_timer(&self, project_id: u32, task_id: u32, notes: &String, hours: f32) {
         self.api.start_timer(project_id, task_id, notes, hours);
+    }
+
+    fn edit_time_entry(&self, id: u32) {
+        for time_entry in self.time_entries.clone() {
+            if time_entry.id == id {
+                self.to_ui
+                    .send(ui::Signal::OpenPopupWithTimeEntry(
+                        self.project_assignments.to_vec(),
+                        time_entry,
+                    ))
+                    .expect("Sending message to ui thread");
+            }
+        }
     }
 }

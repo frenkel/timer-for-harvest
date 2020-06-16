@@ -53,7 +53,7 @@ pub struct TaskAssignment {
     pub task: Task,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct TimeEntry {
     pub id: u32,
     pub project: Project,
@@ -125,7 +125,7 @@ pub struct TaskAssignmentPage {
     pub page: u32,
 }
 
-#[derive(serde::Serialize, serde::Deserialize)]
+#[derive(serde::Serialize, serde::Deserialize, Clone)]
 pub struct User {
     pub id: u32,
 }

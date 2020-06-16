@@ -74,11 +74,10 @@ impl Popup {
             .set_property("activates-default", &true)
             .expect("could not allow default activation");
 
-        let task_assignments = vec![];
         let popup = Popup {
             window: window,
             project_chooser: Popup::project_chooser(project_assignments),
-            task_chooser: Popup::task_chooser(task_assignments),
+            task_chooser: Popup::task_chooser(),
             to_app: to_app,
             delete_button: delete_button,
             save_button: save_button,
@@ -127,7 +126,7 @@ impl Popup {
         project_chooser
     }
 
-    fn task_chooser(task_assignments: Vec<TaskAssignment>) -> gtk::ComboBox {
+    fn task_chooser() -> gtk::ComboBox {
         let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
         let task_chooser = gtk::ComboBox::new_with_model_and_entry(&task_store);
         task_chooser.set_entry_text_column(0);
@@ -176,12 +175,10 @@ impl Popup {
 
         grid.attach(&self.notes_input, 0, 2, 2, 1);
 
-        /* TODO disable when edit running timer */
         grid.attach(&self.hours_input, 2, 2, 2, 1);
 
         grid.attach(&self.delete_button, 0, 3, 2, 1);
 
-        /* TODO change label when edit running timer */
         grid.attach(&self.save_button, 2, 3, 2, 1);
 
         grid.show_all();
@@ -197,30 +194,55 @@ impl Popup {
         self.save_button.connect_clicked(move |button| {
             button.set_sensitive(false);
             let project_id = match project_chooser.get_active() {
-                Some(index) => { Popup::id_from_combo_box(&project_chooser, index) },
-                None => { 0 },
+                Some(index) => Popup::id_from_combo_box(&project_chooser, index),
+                None => 0,
             };
             let task_id = match task_chooser.get_active() {
-                Some(index) => { Popup::id_from_combo_box(&task_chooser, index) },
-                None => { 0 },
+                Some(index) => Popup::id_from_combo_box(&task_chooser, index),
+                None => 0,
             };
             if project_id > 0 && task_id > 0 {
-                to_app.send(app::Signal::StartTimer(
+                to_app
+                    .send(app::Signal::StartTimer(
                         project_id,
                         task_id,
                         notes_input.get_text().unwrap().to_string(),
-                        duration_str_to_f32(
-                            &hours_input.get_text().unwrap(),
-                        ),
+                        duration_str_to_f32(&hours_input.get_text().unwrap()),
                     ))
                     .expect("Sending message to background thread");
-                to_app.send(app::Signal::RetrieveTimeEntries)
+                to_app
+                    .send(app::Signal::RetrieveTimeEntries)
                     .expect("Sending message to background thread");
                 window.close();
             } else {
                 button.set_sensitive(true);
             }
         });
+    }
+
+    pub fn populate(&self, task_assignments: Vec<TaskAssignment>, time_entry: TimeEntry) {
+        self.save_button.set_label("Save Timer");
+        self.hours_input.set_editable(!time_entry.is_running);
+        self.project_chooser.set_active_iter(Some(
+            &Popup::iter_from_id(&self.project_chooser, time_entry.project.id).unwrap(),
+        ));
+        let task_store = self
+            .task_chooser
+            .get_model()
+            .unwrap()
+            .downcast::<gtk::ListStore>()
+            .unwrap();
+        task_store.clear();
+        for task_assignment in task_assignments {
+            task_store.set(
+                &task_store.append(),
+                &[0, 1],
+                &[&task_assignment.task.name, &task_assignment.task.id],
+            );
+        }
+        /*self.task_chooser.set_active_iter(Some(
+            &Popup::iter_from_id(&self.task_chooser, time_entry.task.id).unwrap(),
+        ));*/
     }
 
     fn fuzzy_matching(completion: &gtk::EntryCompletion, key: &str, iter: &gtk::TreeIter) -> bool {
@@ -244,5 +266,19 @@ impl Popup {
 
         let iter = model.get_iter_from_string(&format!("{}", index)).unwrap();
         model.get_value(&iter, 1).get::<u32>().unwrap()
+    }
+
+    fn iter_from_id(combo_box: &gtk::ComboBox, id: u32) -> Option<gtk::TreeIter> {
+        let store = combo_box.get_model().unwrap();
+        let iter = store.get_iter_first().unwrap();
+        loop {
+            if store.get_value(&iter, 1).get::<u32>().unwrap() == id {
+                return Some(iter);
+            }
+            if !store.iter_next(&iter) {
+                break;
+            }
+        }
+        None
     }
 }
