@@ -11,6 +11,7 @@ pub enum Signal {
     StopTimeEntry(u32),
     PrevDate,
     NextDate,
+    LoadTasksForProject(u32),
 }
 
 pub struct App {
@@ -70,6 +71,9 @@ impl App {
                         app.shown_date = app.shown_date.succ();
                         app.retrieve_time_entries();
                     }
+                    Signal::LoadTasksForProject(id) => {
+                        app.retrieve_tasks_for_project(id);
+                    }
                 }
             }
         });
@@ -112,5 +116,16 @@ impl App {
             .expect("Sending message to ui thread");
         self.api.stop_timer(id);
         self.retrieve_time_entries();
+    }
+
+    fn retrieve_tasks_for_project(&self, id: u32) {
+        for project_assignment in &self.project_assignments {
+            if id == project_assignment.project.id {
+                self.to_ui
+                    .send(ui::Signal::TaskAssignments(project_assignment.task_assignments.clone()))
+                    .expect("Sending message to ui thread");
+                break;
+            }
+        }
     }
 }

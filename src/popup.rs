@@ -1,4 +1,6 @@
+use crate::app;
 use gtk::prelude::*;
+use std::sync::mpsc;
 use timer_for_harvest::*;
 
 /* handy gtk callback clone macro taken from https://gtk-rs.org/docs-src/tutorial/closures */
@@ -22,13 +24,14 @@ macro_rules! clone {
 pub struct Popup {
     window: gtk::Window,
     project_chooser: gtk::ComboBox,
-    task_chooser: gtk::ComboBox,
+    pub task_chooser: gtk::ComboBox,
 }
 
 impl Popup {
     pub fn new(
         application: &gtk::Application,
         project_assignments: Vec<ProjectAssignment>,
+        to_app: mpsc::Sender<app::Signal>,
     ) -> Popup {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
 
@@ -36,7 +39,7 @@ impl Popup {
         window.set_default_size(400, 200);
         window.set_modal(true);
         window.set_type_hint(gdk::WindowTypeHint::Dialog);
-        window.set_border_width(10);
+        window.set_border_width(18);
 
         window.connect_delete_event(|_, _| Inhibit(false));
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
@@ -57,14 +60,14 @@ impl Popup {
         let task_assignments = vec![];
         let popup = Popup {
             window: window,
-            project_chooser: Popup::project_chooser(project_assignments),
+            project_chooser: Popup::project_chooser(project_assignments, to_app),
             task_chooser: Popup::task_chooser(task_assignments),
         };
         popup.fill_grid();
         popup
     }
 
-    fn project_chooser(project_assignments: Vec<ProjectAssignment>) -> gtk::ComboBox {
+    fn project_chooser(project_assignments: Vec<ProjectAssignment>, to_app: mpsc::Sender<app::Signal>) -> gtk::ComboBox {
         let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
         for project_assignment in project_assignments {
             project_store.set(
@@ -93,7 +96,8 @@ impl Popup {
                         .get_value(&iter, 1)
                         .get::<u32>()
                         .unwrap();
-                    println!("{}", id);
+                    to_app.send(app::Signal::LoadTasksForProject(id))
+                            .expect("Sending message to application thread");
                 }
                 None => {}
             }
