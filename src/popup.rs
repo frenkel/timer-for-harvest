@@ -25,6 +25,7 @@ pub struct Popup {
     window: gtk::Window,
     project_chooser: gtk::ComboBox,
     pub task_chooser: gtk::ComboBox,
+    to_app: mpsc::Sender<app::Signal>,
 }
 
 impl Popup {
@@ -60,14 +61,15 @@ impl Popup {
         let task_assignments = vec![];
         let popup = Popup {
             window: window,
-            project_chooser: Popup::project_chooser(project_assignments, to_app),
+            project_chooser: Popup::project_chooser(project_assignments),
             task_chooser: Popup::task_chooser(task_assignments),
+            to_app: to_app,
         };
         popup.fill_grid();
         popup
     }
 
-    fn project_chooser(project_assignments: Vec<ProjectAssignment>, to_app: mpsc::Sender<app::Signal>) -> gtk::ComboBox {
+    fn project_chooser(project_assignments: Vec<ProjectAssignment>) -> gtk::ComboBox {
         let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
         for project_assignment in project_assignments {
             project_store.set(
@@ -82,26 +84,6 @@ impl Popup {
         let project_chooser = gtk::ComboBox::new_with_model_and_entry(&project_store);
 
         project_chooser.set_entry_text_column(0);
-        project_chooser.connect_changed(move |project_chooser| {
-            match project_chooser.get_active() {
-                Some(index) => {
-                    let iter = project_chooser
-                        .get_model()
-                        .unwrap()
-                        .get_iter_from_string(&format!("{}", index))
-                        .unwrap();
-                    let id = project_chooser
-                        .get_model()
-                        .unwrap()
-                        .get_value(&iter, 1)
-                        .get::<u32>()
-                        .unwrap();
-                    to_app.send(app::Signal::LoadTasksForProject(id))
-                            .expect("Sending message to application thread");
-                }
-                None => {}
-            }
-        });
 
         let project_completer = gtk::EntryCompletion::new();
         project_completer.set_model(Some(&project_store));
@@ -156,6 +138,17 @@ impl Popup {
 
         self.window.add(&grid);
 
+        let to_app = self.to_app.clone();
+        self.project_chooser
+            .connect_changed(move |project_chooser| match project_chooser.get_active() {
+                Some(index) => {
+                    let project_id = Popup::id_from_combo_box(&project_chooser, index);
+                    to_app
+                        .send(app::Signal::LoadTasksForProject(project_id))
+                        .expect("Sending message to application thread");
+                }
+                None => {}
+            });
         grid.attach(&self.project_chooser, 0, 0, 4, 1);
 
         grid.attach(&self.task_chooser, 0, 1, 4, 1);
@@ -183,6 +176,38 @@ impl Popup {
         /* TODO change label when edit running timer */
         grid.attach(&save_button, 2, 3, 2, 1);
 
+        let to_app = self.to_app.clone();
+        let project_chooser = self.project_chooser.clone();
+        let task_chooser = self.task_chooser.clone();
+        let window = self.window.clone();
+        save_button.connect_clicked(clone!(notes_input, hour_input => move |button| {
+            button.set_sensitive(false);
+            let project_id = match project_chooser.get_active() {
+                Some(index) => { Popup::id_from_combo_box(&project_chooser, index) },
+                None => { 0 },
+            };
+            let task_id = match task_chooser.get_active() {
+                Some(index) => { Popup::id_from_combo_box(&task_chooser, index) },
+                None => { 0 },
+            };
+            if project_id > 0 && task_id > 0 {
+                to_app.send(app::Signal::StartTimer(
+                        project_id,
+                        task_id,
+                        notes_input.get_text().unwrap().to_string(),
+                        duration_str_to_f32(
+                            &hour_input.get_text().unwrap(),
+                        ),
+                    ))
+                    .expect("Sending message to background thread");
+                to_app.send(app::Signal::RetrieveTimeEntries)
+                    .expect("Sending message to background thread");
+                window.close();
+            } else {
+                button.set_sensitive(true);
+            }
+        }));
+
         grid.show_all();
     }
 
@@ -200,5 +225,12 @@ impl Popup {
         } else {
             false
         }
+    }
+
+    fn id_from_combo_box(combo_box: &gtk::ComboBox, index: u32) -> u32 {
+        let model = combo_box.get_model().unwrap();
+
+        let iter = model.get_iter_from_string(&format!("{}", index)).unwrap();
+        model.get_value(&iter, 1).get::<u32>().unwrap()
     }
 }

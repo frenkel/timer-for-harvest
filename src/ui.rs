@@ -265,14 +265,23 @@ impl Ui {
     }
 
     fn open_popup(&mut self, project_assignments: Vec<ProjectAssignment>) {
-        self.popup = Some(Popup::new(&self.application, project_assignments, self.to_app.clone()));
+        self.popup = Some(Popup::new(
+            &self.application,
+            project_assignments,
+            self.to_app.clone(),
+        ));
     }
 
     fn load_tasks(&self, task_assignments: Vec<TaskAssignment>) {
         match &self.popup {
-            None => {},
+            None => {}
             Some(popup) => {
-                let store = popup.task_chooser.get_model().unwrap().downcast::<gtk::ListStore>().unwrap();
+                let store = popup
+                    .task_chooser
+                    .get_model()
+                    .unwrap()
+                    .downcast::<gtk::ListStore>()
+                    .unwrap();
                 for task_assignment in task_assignments {
                     store.set(
                         &store.append(),

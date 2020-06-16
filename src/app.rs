@@ -12,6 +12,7 @@ pub enum Signal {
     PrevDate,
     NextDate,
     LoadTasksForProject(u32),
+    StartTimer(u32, u32, String, f32),
 }
 
 pub struct App {
@@ -74,6 +75,9 @@ impl App {
                     Signal::LoadTasksForProject(id) => {
                         app.retrieve_tasks_for_project(id);
                     }
+                    Signal::StartTimer(project_id, task_id, notes, hours) => {
+                        app.start_timer(project_id, task_id, &notes, hours);
+                    }
                 }
             }
         });
@@ -122,10 +126,16 @@ impl App {
         for project_assignment in &self.project_assignments {
             if id == project_assignment.project.id {
                 self.to_ui
-                    .send(ui::Signal::TaskAssignments(project_assignment.task_assignments.clone()))
+                    .send(ui::Signal::TaskAssignments(
+                        project_assignment.task_assignments.clone(),
+                    ))
                     .expect("Sending message to ui thread");
                 break;
             }
         }
+    }
+
+    fn start_timer(&self, project_id: u32, task_id: u32, notes: &String, hours: f32) {
+        self.api.start_timer(project_id, task_id, notes, hours);
     }
 }
