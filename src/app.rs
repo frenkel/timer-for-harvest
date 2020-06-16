@@ -9,6 +9,7 @@ pub enum Signal {
     EditTimeEntry(u32),
     RestartTimeEntry(u32),
     StopTimeEntry(u32),
+    DeleteTimeEntry(u32),
     PrevDate,
     NextDate,
     LoadTasksForProject(u32),
@@ -68,6 +69,10 @@ impl App {
                     }
                     Signal::StopTimeEntry(id) => {
                         app.stop_timer(id);
+                        app.retrieve_time_entries();
+                    }
+                    Signal::DeleteTimeEntry(id) => {
+                        app.api.delete_timer(id);
                         app.retrieve_time_entries();
                     }
                     Signal::PrevDate => {

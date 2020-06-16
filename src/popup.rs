@@ -177,6 +177,7 @@ impl Popup {
 
         grid.attach(&self.hours_input, 2, 2, 2, 1);
 
+        self.delete_button.set_sensitive(false);
         grid.attach(&self.delete_button, 0, 3, 2, 1);
 
         grid.attach(&self.save_button, 2, 3, 2, 1);
@@ -243,6 +244,16 @@ impl Popup {
         /*self.task_chooser.set_active_iter(Some(
             &Popup::iter_from_id(&self.task_chooser, time_entry.task.id).unwrap(),
         ));*/
+        self.delete_button.set_sensitive(true);
+        let to_app = self.to_app.clone();
+        let window = self.window.clone();
+        self.delete_button.connect_clicked(move |button| {
+            button.set_sensitive(false);
+
+            to_app.send(app::Signal::DeleteTimeEntry(time_entry.id))
+            .expect("Sending message to application thread");
+            window.close();
+        });
     }
 
     fn fuzzy_matching(completion: &gtk::EntryCompletion, key: &str, iter: &gtk::TreeIter) -> bool {
