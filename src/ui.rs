@@ -90,11 +90,20 @@ impl Ui {
                         }
                     }
                     ui.open_popup(project_assignments);
-                    ui.populate_popup(task_assignments, time_entry);
+                    match &ui.popup {
+                        Some(popup) => {
+                            popup.load_tasks(task_assignments);
+                            popup.populate(time_entry);
+                        }
+                        None => {}
+                    }
                 }
-                Signal::TaskAssignments(task_assignments) => {
-                    ui.load_tasks(task_assignments);
-                }
+                Signal::TaskAssignments(task_assignments) => match &ui.popup {
+                    Some(popup) => {
+                        popup.load_tasks(task_assignments);
+                    }
+                    None => {}
+                },
             }
             glib::Continue(true)
         });
@@ -136,7 +145,6 @@ impl Ui {
 
         let button =
             gtk::Button::new_from_icon_name(Some("list-add-symbolic"), gtk::IconSize::Button);
-        button.set_sensitive(false);
         header_bar.pack_start(&button);
         button.connect_clicked(clone!(to_app => move |_button| {
             to_app.send(app::Signal::NewTimeEntry)
@@ -282,33 +290,5 @@ impl Ui {
             project_assignments,
             self.to_app.clone(),
         ));
-    }
-
-    fn populate_popup(&self, task_assignments: Vec<TaskAssignment>, time_entry: TimeEntry) {
-        match &self.popup {
-            Some(popup) => popup.populate(task_assignments, time_entry),
-            None => {}
-        }
-    }
-
-    fn load_tasks(&self, task_assignments: Vec<TaskAssignment>) {
-        match &self.popup {
-            None => {}
-            Some(popup) => {
-                let store = popup
-                    .task_chooser
-                    .get_model()
-                    .unwrap()
-                    .downcast::<gtk::ListStore>()
-                    .unwrap();
-                for task_assignment in task_assignments {
-                    store.set(
-                        &store.append(),
-                        &[0, 1],
-                        &[&task_assignment.task.name, &task_assignment.task.id],
-                    );
-                }
-            }
-        }
     }
 }

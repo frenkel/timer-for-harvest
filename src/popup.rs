@@ -24,7 +24,7 @@ macro_rules! clone {
 pub struct Popup {
     window: gtk::Window,
     project_chooser: gtk::ComboBox,
-    pub task_chooser: gtk::ComboBox,
+    task_chooser: gtk::ComboBox,
     to_app: mpsc::Sender<app::Signal>,
     delete_button: gtk::Button,
     save_button: gtk::Button,
@@ -102,7 +102,6 @@ impl Popup {
             );
         }
         let project_chooser = gtk::ComboBox::new_with_model_and_entry(&project_store);
-
         project_chooser.set_entry_text_column(0);
 
         let project_completer = gtk::EntryCompletion::new();
@@ -122,7 +121,6 @@ impl Popup {
             .unwrap()
             .set_completion(Some(&project_completer));
         project_chooser.set_hexpand(true);
-
         project_chooser
     }
 
@@ -221,37 +219,33 @@ impl Popup {
         });
     }
 
-    pub fn populate(&self, task_assignments: Vec<TaskAssignment>, time_entry: TimeEntry) {
+    pub fn populate(&self, time_entry: TimeEntry) {
         self.save_button.set_label("Save Timer");
         self.hours_input.set_editable(!time_entry.is_running);
         self.project_chooser.set_active_iter(Some(
             &Popup::iter_from_id(&self.project_chooser, time_entry.project.id).unwrap(),
         ));
-        let task_store = self
-            .task_chooser
-            .get_model()
-            .unwrap()
-            .downcast::<gtk::ListStore>()
-            .unwrap();
-        task_store.clear();
-        for task_assignment in task_assignments {
-            task_store.set(
-                &task_store.append(),
-                &[0, 1],
-                &[&task_assignment.task.name, &task_assignment.task.id],
-            );
+
+        match &time_entry.notes {
+            Some(n) => self.notes_input.set_text(&n),
+            None => {}
         }
-        /*self.task_chooser.set_active_iter(Some(
+        self.hours_input
+            .set_text(&f32_to_duration_str(time_entry.hours));
+
+        self.task_chooser.set_active_iter(Some(
             &Popup::iter_from_id(&self.task_chooser, time_entry.task.id).unwrap(),
-        ));*/
-        self.delete_button.set_sensitive(true);
+        ));
+
         let to_app = self.to_app.clone();
         let window = self.window.clone();
+        self.delete_button.set_sensitive(true);
         self.delete_button.connect_clicked(move |button| {
             button.set_sensitive(false);
 
-            to_app.send(app::Signal::DeleteTimeEntry(time_entry.id))
-            .expect("Sending message to application thread");
+            to_app
+                .send(app::Signal::DeleteTimeEntry(time_entry.id))
+                .expect("Sending message to application thread");
             window.close();
         });
     }
@@ -280,7 +274,11 @@ impl Popup {
     }
 
     fn iter_from_id(combo_box: &gtk::ComboBox, id: u32) -> Option<gtk::TreeIter> {
-        let store = combo_box.get_model().unwrap();
+        let store = combo_box
+            .get_model()
+            .unwrap()
+            .downcast::<gtk::ListStore>()
+            .unwrap();
         let iter = store.get_iter_first().unwrap();
         loop {
             if store.get_value(&iter, 1).get::<u32>().unwrap() == id {
@@ -291,5 +289,22 @@ impl Popup {
             }
         }
         None
+    }
+
+    pub fn load_tasks(&self, task_assignments: Vec<TaskAssignment>) {
+        let store = self
+            .task_chooser
+            .get_model()
+            .unwrap()
+            .downcast::<gtk::ListStore>()
+            .unwrap();
+        store.clear();
+        for task_assignment in task_assignments {
+            store.set(
+                &store.append(),
+                &[0, 1],
+                &[&task_assignment.task.name, &task_assignment.task.id],
+            );
+        }
     }
 }
