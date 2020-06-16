@@ -26,6 +26,10 @@ pub struct Popup {
     project_chooser: gtk::ComboBox,
     pub task_chooser: gtk::ComboBox,
     to_app: mpsc::Sender<app::Signal>,
+    delete_button: gtk::Button,
+    save_button: gtk::Button,
+    notes_input: gtk::Entry,
+    hours_input: gtk::Entry,
 }
 
 impl Popup {
@@ -58,14 +62,31 @@ impl Popup {
 
         window.show_all();
 
+        let delete_button = gtk::Button::new_with_label("Delete");
+        let save_button = gtk::Button::new_with_label("Start Timer");
+        save_button.set_can_default(true);
+        let notes_input = gtk::Entry::new();
+        notes_input
+            .set_property("activates-default", &true)
+            .expect("could not allow default activation");
+        let hours_input = gtk::Entry::new();
+        hours_input
+            .set_property("activates-default", &true)
+            .expect("could not allow default activation");
+
         let task_assignments = vec![];
         let popup = Popup {
             window: window,
             project_chooser: Popup::project_chooser(project_assignments),
             task_chooser: Popup::task_chooser(task_assignments),
             to_app: to_app,
+            delete_button: delete_button,
+            save_button: save_button,
+            notes_input: notes_input,
+            hours_input: hours_input,
         };
-        popup.fill_grid();
+        popup.add_widgets();
+        popup.connect_signals();
         popup
     }
 
@@ -131,7 +152,7 @@ impl Popup {
         task_chooser
     }
 
-    fn fill_grid(&self) {
+    fn add_widgets(&self) {
         let grid = gtk::Grid::new();
         grid.set_column_spacing(12);
         grid.set_row_spacing(18);
@@ -153,34 +174,27 @@ impl Popup {
 
         grid.attach(&self.task_chooser, 0, 1, 4, 1);
 
-        let notes_input = gtk::Entry::new();
-        notes_input
-            .set_property("activates-default", &true)
-            .expect("could not allow default activation");
-        grid.attach(&notes_input, 0, 2, 2, 1);
+        grid.attach(&self.notes_input, 0, 2, 2, 1);
 
-        let hour_input = gtk::Entry::new();
-        hour_input
-            .set_property("activates-default", &true)
-            .expect("could not allow default activation");
-        grid.attach(&hour_input, 2, 2, 2, 1);
         /* TODO disable when edit running timer */
+        grid.attach(&self.hours_input, 2, 2, 2, 1);
 
-        let delete_button = gtk::Button::new();
-        delete_button.set_label("Delete");
-        grid.attach(&delete_button, 0, 3, 2, 1);
+        grid.attach(&self.delete_button, 0, 3, 2, 1);
 
-        let save_button = gtk::Button::new();
-        save_button.set_can_default(true);
-        save_button.set_label("Start Timer");
         /* TODO change label when edit running timer */
-        grid.attach(&save_button, 2, 3, 2, 1);
+        grid.attach(&self.save_button, 2, 3, 2, 1);
 
+        grid.show_all();
+    }
+
+    fn connect_signals(&self) {
         let to_app = self.to_app.clone();
         let project_chooser = self.project_chooser.clone();
         let task_chooser = self.task_chooser.clone();
         let window = self.window.clone();
-        save_button.connect_clicked(clone!(notes_input, hour_input => move |button| {
+        let notes_input = self.notes_input.clone();
+        let hours_input = self.hours_input.clone();
+        self.save_button.connect_clicked(move |button| {
             button.set_sensitive(false);
             let project_id = match project_chooser.get_active() {
                 Some(index) => { Popup::id_from_combo_box(&project_chooser, index) },
@@ -196,7 +210,7 @@ impl Popup {
                         task_id,
                         notes_input.get_text().unwrap().to_string(),
                         duration_str_to_f32(
-                            &hour_input.get_text().unwrap(),
+                            &hours_input.get_text().unwrap(),
                         ),
                     ))
                     .expect("Sending message to background thread");
@@ -206,9 +220,7 @@ impl Popup {
             } else {
                 button.set_sensitive(true);
             }
-        }));
-
-        grid.show_all();
+        });
     }
 
     fn fuzzy_matching(completion: &gtk::EntryCompletion, key: &str, iter: &gtk::TreeIter) -> bool {
