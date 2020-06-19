@@ -280,12 +280,29 @@ impl Popup {
 
         let popup_ref2 = Rc::clone(&popup);
         let to_background3 = popup.to_background.clone();
+
         popup.delete_button.connect_clicked(move |button| {
             button.set_sensitive(false);
-            to_background3
-                .send(ui::Event::DeleteTimer(popup_ref2.timer.id.unwrap()))
-                .expect("Sending message to background thread");
-            popup_ref2.window.close();
+
+            let confirmation_box = gtk::MessageDialog::new(
+                None::<&gtk::Window>,
+                gtk::DialogFlags::empty(),
+                gtk::MessageType::Warning,
+                gtk::ButtonsType::YesNo,
+                "Are you sure you want to delete this entry?"
+            );
+
+            let confirmation_response = confirmation_box.run();
+            confirmation_box.destroy();
+
+            if confirmation_response == gtk::ResponseType::Yes {
+                to_background3
+                    .send(ui::Event::DeleteTimer(popup_ref2.timer.id.unwrap()))
+                    .expect("Sending message to background thread");
+                popup_ref2.window.close();
+            } else {
+                button.set_sensitive(true);
+            }
         });
     }
 
