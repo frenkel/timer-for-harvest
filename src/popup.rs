@@ -156,17 +156,6 @@ impl Popup {
 
         self.window.add(&grid);
 
-        let to_app = self.to_app.clone();
-        self.project_chooser
-            .connect_changed(move |project_chooser| match project_chooser.get_active() {
-                Some(index) => {
-                    let project_id = Popup::id_from_combo_box(&project_chooser, index);
-                    to_app
-                        .send(app::Signal::LoadTasksForProject(project_id))
-                        .expect("Sending message to application thread");
-                }
-                None => {}
-            });
         grid.attach(&self.project_chooser, 0, 0, 4, 1);
 
         grid.attach(&self.task_chooser, 0, 1, 4, 1);
@@ -217,6 +206,18 @@ impl Popup {
                 button.set_sensitive(true);
             }
         });
+
+        let to_app = self.to_app.clone();
+        self.project_chooser
+            .connect_changed(move |project_chooser| match project_chooser.get_active() {
+                Some(index) => {
+                    let project_id = Popup::id_from_combo_box(&project_chooser, index);
+                    to_app
+                        .send(app::Signal::LoadTasksForProject(project_id))
+                        .expect("Sending message to application thread");
+                }
+                None => {}
+            });
     }
 
     pub fn populate(&self, time_entry: TimeEntry) {
