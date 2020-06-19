@@ -84,7 +84,7 @@ impl Ui {
                 Signal::OpenPopupWithTimeEntry(project_assignments, time_entry) => {
                     let mut task_assignments = vec![];
                     for project_assignment in &project_assignments {
-                        if project_assignment.project.id == time_entry.id {
+                        if project_assignment.project.id == time_entry.project.id {
                             task_assignments = project_assignment.task_assignments.clone();
                             break;
                         }
