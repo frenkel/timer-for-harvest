@@ -140,6 +140,7 @@ impl Popup {
         let delete_button = gtk::Button::new();
         delete_button.set_label("Delete");
         delete_button.set_sensitive(timer.id != None);
+        delete_button.get_style_context().add_class(&gtk::STYLE_CLASS_DESTRUCTIVE_ACTION);
         buttons.pack_start(&delete_button, true, false, 0);
 
         let save_button = gtk::Button::new();
