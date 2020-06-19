@@ -25,6 +25,7 @@ pub struct Ui {
     to_background: mpsc::Sender<Event>,
     start_button: gtk::Button,
     prev_button: gtk::Button,
+    today_button: gtk::Button,
     next_button: gtk::Button,
     time_entries: Rc<RefCell<Vec<TimeEntryRow>>>,
     pub project_assignments: Rc<RefCell<Vec<ProjectAssignment>>>,
@@ -174,9 +175,14 @@ impl Ui {
             gtk::Button::new_from_icon_name(Some("go-previous-symbolic"), gtk::IconSize::Button);
         hbox.pack_start(&prev_button, false, false, 0);
 
+        let today_button =
+            gtk::Button::new_from_icon_name(Some("go-home-symbolic"), gtk::IconSize::Button);
+        hbox.pack_start(&today_button, false, false, 0);
+
         let next_button =
             gtk::Button::new_from_icon_name(Some("go-next-symbolic"), gtk::IconSize::Button);
         hbox.pack_start(&next_button, false, false, 0);
+
         container.pack_start(&hbox);
 
         to_background
@@ -194,6 +200,7 @@ impl Ui {
             to_background: to_background,
             start_button: button,
             prev_button: prev_button,
+            today_button: today_button,
             next_button: next_button,
             time_entries: Rc::new(RefCell::new(vec![])),
             project_assignments: Rc::new(RefCell::new(vec![])),
@@ -205,9 +212,11 @@ impl Ui {
     pub fn connect_main_window_signals(ui: &Rc<Ui>) {
         let to_background = ui.to_background.clone();
         let prev_to_background = ui.to_background.clone();
+        let today_to_background = ui.to_background.clone();
         let next_to_background = ui.to_background.clone();
         let key_press_event_ui_ref = Rc::clone(&ui);
         let start_button_ui_ref = Rc::clone(&ui);
+        let today_button_ui_ref = Rc::clone(&ui);
         let next_button_ui_ref = Rc::clone(&ui);
         let prev_button_ui_ref = Rc::clone(&ui);
         let open_popup = move |ui_ref: &Rc<Ui>| {
@@ -248,6 +257,16 @@ impl Ui {
 
         ui.start_button.connect_clicked(move |_| {
             open_popup(&start_button_ui_ref);
+        });
+
+        ui.today_button.connect_clicked(move |_| {
+            let new_date = chrono::Local::today().naive_local();
+            today_button_ui_ref.for_date.replace(new_date);
+            today_to_background
+                .send(Event::RetrieveTimeEntries(
+                    today_button_ui_ref.for_date.borrow().to_string(),
+                ))
+                .expect("Sending message to background thread");
         });
 
         ui.prev_button.connect_clicked(move |_| {
