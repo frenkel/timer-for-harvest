@@ -168,6 +168,14 @@ impl Ui {
                 .expect("Sending message to application thread");
         }));
 
+        let today_button =
+            gtk::Button::new_from_icon_name(Some("go-home-symbolic"), gtk::IconSize::Button);
+        hbox.pack_start(&today_button, false, false, 0);
+        today_button.connect_clicked(clone!(to_app => move |_button| {
+            to_app.send(app::Signal::TodayDate)
+                .expect("Sending message to application thread");
+        }));
+
         let next_button =
             gtk::Button::new_from_icon_name(Some("go-next-symbolic"), gtk::IconSize::Button);
         hbox.pack_start(&next_button, false, false, 0);

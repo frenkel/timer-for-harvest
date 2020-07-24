@@ -12,9 +12,10 @@ pub enum Signal {
     DeleteTimeEntry(u32),
     PrevDate,
     NextDate,
+    TodayDate,
     LoadTasksForProject(u32),
     StartTimer(u32, u32, String, f32),
-    MinutePassed
+    MinutePassed,
 }
 
 pub struct App {
@@ -82,6 +83,10 @@ impl App {
                     }
                     Signal::NextDate => {
                         app.shown_date = app.shown_date.succ();
+                        app.retrieve_time_entries();
+                    }
+                    Signal::TodayDate => {
+                        app.shown_date = chrono::Local::today().naive_local();
                         app.retrieve_time_entries();
                     }
                     Signal::LoadTasksForProject(id) => {
