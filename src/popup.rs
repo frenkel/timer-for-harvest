@@ -205,6 +205,15 @@ impl Popup {
                             .expect("Sending message to background thread");
                     }
                     Some(id) => {
+                        to_app
+                            .send(app::Signal::UpdateTimer(
+                                id,
+                                project_id,
+                                task_id,
+                                notes_input.get_text().unwrap().to_string(),
+                                duration_str_to_f32(&hours_input.get_text().unwrap()),
+                            ))
+                            .expect("Sending message to background thread");
                     }
                 }
                 window.close();

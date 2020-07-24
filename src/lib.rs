@@ -319,7 +319,7 @@ impl Harvest {
             .expect(&format!("Unexpected user structure: {}", body).to_string())
     }
 
-    pub fn start_timer(&self, project_id: u32, task_id: u32, notes: &str, hours: f32) -> TimeEntry {
+    pub fn start_timer(&self, project_id: u32, task_id: u32, notes: String, hours: f32) -> TimeEntry {
         let url = "https://api.harvestapp.com/v2/time_entries";
         let now = Local::now().format("%Y-%m-%d");
         let mut timer = Timer {
@@ -332,7 +332,7 @@ impl Harvest {
             is_running: true,
         };
         if notes.len() > 0 {
-            timer.notes = Some(notes.to_string());
+            timer.notes = Some(notes);
         }
         if hours > 0.0 {
             timer.hours = Some(hours);

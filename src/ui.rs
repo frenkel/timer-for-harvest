@@ -264,7 +264,8 @@ impl Ui {
             edit_button.set_valign(gtk::Align::Center);
             let to_app = self.to_app.clone();
             let id = time_entry.id;
-            edit_button.connect_clicked(move |_button| {
+            edit_button.connect_clicked(move |button| {
+                button.set_sensitive(false);
                 to_app
                     .send(app::Signal::EditTimeEntry(id))
                     .expect("Sending message to application thread");

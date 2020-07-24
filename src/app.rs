@@ -16,6 +16,7 @@ pub enum Signal {
     LoadTasksForProject(u32),
     StartTimer(u32, u32, String, f32),
     MinutePassed,
+    UpdateTimer(u32, u32, u32, String, f32),
 }
 
 pub struct App {
@@ -93,11 +94,15 @@ impl App {
                         app.retrieve_tasks_for_project(id);
                     }
                     Signal::StartTimer(project_id, task_id, notes, hours) => {
-                        app.start_timer(project_id, task_id, &notes, hours);
+                        app.start_timer(project_id, task_id, notes, hours);
                         app.retrieve_time_entries();
                     }
                     Signal::MinutePassed => {
                         app.increment_running_timer();
+                    }
+                    Signal::UpdateTimer(id, project_id, task_id, notes, hours) => {
+                        app.update_timer(id, project_id, task_id, notes, hours);
+                        app.retrieve_time_entries();
                     }
                 }
             }
@@ -167,8 +172,18 @@ impl App {
         }
     }
 
-    fn start_timer(&self, project_id: u32, task_id: u32, notes: &String, hours: f32) {
+    fn start_timer(&self, project_id: u32, task_id: u32, notes: String, hours: f32) {
         self.api.start_timer(project_id, task_id, notes, hours);
+    }
+
+    fn update_timer(&self, id: u32, project_id: u32, task_id: u32, notes: String, hours: f32) {
+        for time_entry in &self.time_entries {
+            if time_entry.id == id {
+                self.api.update_timer(id, project_id, task_id, notes, hours,
+                        time_entry.is_running, time_entry.spent_date.clone());
+                break;
+            }
+        }
     }
 
     fn edit_time_entry(&self, id: u32) {
