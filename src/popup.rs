@@ -30,6 +30,7 @@ pub struct Popup {
     save_button: gtk::Button,
     notes_input: gtk::Entry,
     hours_input: gtk::Entry,
+    time_entry_id: Option<u32>,
 }
 
 impl Popup {
@@ -84,9 +85,9 @@ impl Popup {
             save_button: save_button,
             notes_input: notes_input,
             hours_input: hours_input,
+            time_entry_id: None,
         };
         popup.add_widgets();
-        popup.connect_signals();
         popup
     }
 
@@ -173,13 +174,14 @@ impl Popup {
         grid.show_all();
     }
 
-    fn connect_signals(&self) {
+    pub fn connect_signals(&self) {
         let to_app = self.to_app.clone();
         let project_chooser = self.project_chooser.clone();
         let task_chooser = self.task_chooser.clone();
         let window = self.window.clone();
         let notes_input = self.notes_input.clone();
         let hours_input = self.hours_input.clone();
+        let time_entry_id = self.time_entry_id;
         self.save_button.connect_clicked(move |button| {
             button.set_sensitive(false);
             let project_id = match project_chooser.get_active() {
@@ -191,17 +193,20 @@ impl Popup {
                 None => 0,
             };
             if project_id > 0 && task_id > 0 {
-                to_app
-                    .send(app::Signal::StartTimer(
-                        project_id,
-                        task_id,
-                        notes_input.get_text().unwrap().to_string(),
-                        duration_str_to_f32(&hours_input.get_text().unwrap()),
-                    ))
-                    .expect("Sending message to background thread");
-                to_app
-                    .send(app::Signal::RetrieveTimeEntries)
-                    .expect("Sending message to background thread");
+                match time_entry_id {
+                    None => {
+                        to_app
+                            .send(app::Signal::StartTimer(
+                                project_id,
+                                task_id,
+                                notes_input.get_text().unwrap().to_string(),
+                                duration_str_to_f32(&hours_input.get_text().unwrap()),
+                            ))
+                            .expect("Sending message to background thread");
+                    }
+                    Some(id) => {
+                    }
+                }
                 window.close();
             } else {
                 button.set_sensitive(true);
@@ -221,7 +226,8 @@ impl Popup {
             });
     }
 
-    pub fn populate(&self, time_entry: TimeEntry) {
+    pub fn populate(&mut self, time_entry: TimeEntry) {
+        self.time_entry_id = Some(time_entry.id);
         self.save_button.set_label("Save Timer");
         self.hours_input.set_editable(!time_entry.is_running);
         self.project_chooser.set_active_iter(Some(

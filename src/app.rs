@@ -94,6 +94,7 @@ impl App {
                     }
                     Signal::StartTimer(project_id, task_id, notes, hours) => {
                         app.start_timer(project_id, task_id, &notes, hours);
+                        app.retrieve_time_entries();
                     }
                     Signal::MinutePassed => {
                         app.increment_running_timer();

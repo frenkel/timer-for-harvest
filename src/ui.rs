@@ -85,7 +85,7 @@ impl Ui {
                     ui.set_time_entries(time_entries);
                 }
                 Signal::OpenPopup(project_assignments) => {
-                    ui.open_popup(project_assignments);
+                    ui.open_popup(project_assignments, vec![], None);
                 }
                 Signal::OpenPopupWithTimeEntry(project_assignments, time_entry) => {
                     let mut task_assignments = vec![];
@@ -95,14 +95,7 @@ impl Ui {
                             break;
                         }
                     }
-                    ui.open_popup(project_assignments);
-                    match &ui.popup {
-                        Some(popup) => {
-                            popup.load_tasks(task_assignments);
-                            popup.populate(time_entry);
-                        }
-                        None => {}
-                    }
+                    ui.open_popup(project_assignments, task_assignments, Some(time_entry));
                 }
                 Signal::TaskAssignments(task_assignments) => match &ui.popup {
                     Some(popup) => {
@@ -298,11 +291,23 @@ impl Ui {
         self.grid.show_all();
     }
 
-    fn open_popup(&mut self, project_assignments: Vec<ProjectAssignment>) {
-        self.popup = Some(Popup::new(
+    fn open_popup(&mut self, project_assignments: Vec<ProjectAssignment>,
+            task_assignments: Vec<TaskAssignment>,
+            time_entry: Option<TimeEntry>) {
+        let mut popup = Popup::new(
             &self.application,
             project_assignments,
             self.to_app.clone(),
-        ));
+        );
+
+        popup.load_tasks(task_assignments);
+        match time_entry {
+            Some(time_entry) => popup.populate(time_entry),
+            None => {},
+        }
+        /* call after populate, otherwise task active iter is reset */
+        popup.connect_signals();
+
+        self.popup = Some(popup);
     }
 }
