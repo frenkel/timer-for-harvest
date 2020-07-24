@@ -14,6 +14,7 @@ pub enum Signal {
     NextDate,
     LoadTasksForProject(u32),
     StartTimer(u32, u32, String, f32),
+    MinutePassed
 }
 
 pub struct App {
@@ -89,6 +90,9 @@ impl App {
                     Signal::StartTimer(project_id, task_id, notes, hours) => {
                         app.start_timer(project_id, task_id, &notes, hours);
                     }
+                    Signal::MinutePassed => {
+                        app.increment_running_timer();
+                    }
                 }
             }
         });
@@ -110,6 +114,19 @@ impl App {
             self.shown_date.to_string(),
             self.shown_date.to_string(),
         );
+
+        self.to_ui
+            .send(ui::Signal::SetTimeEntries(self.time_entries.clone()))
+            .expect("Sending message to ui thread");
+        self.format_and_send_title();
+    }
+
+    fn increment_running_timer(&mut self) {
+        for mut time_entry in &mut self.time_entries {
+            if time_entry.is_running {
+                time_entry.hours += 1.0 / 60.0;
+            }
+        }
 
         self.to_ui
             .send(ui::Signal::SetTimeEntries(self.time_entries.clone()))

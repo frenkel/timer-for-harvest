@@ -52,6 +52,12 @@ impl Ui {
         grid.set_row_spacing(18);
 
         application.connect_activate(clone!(to_app, header_bar, grid => move |app| {
+            gtk::timeout_add_seconds(60, clone!(to_app => move || {
+                to_app.send(app::Signal::MinutePassed)
+                    .expect("Sending message to application thread");
+                glib::Continue(true)
+            }));
+
             Ui::main_window(app, &to_app, &header_bar, &grid);
         }));
 
