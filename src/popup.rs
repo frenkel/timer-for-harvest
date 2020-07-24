@@ -63,6 +63,7 @@ impl Popup {
         window.show_all();
 
         let delete_button = gtk::Button::new_with_label("Delete");
+        delete_button.get_style_context().add_class(&gtk::STYLE_CLASS_DESTRUCTIVE_ACTION);
         let save_button = gtk::Button::new_with_label("Start Timer");
         save_button.set_can_default(true);
         let notes_input = gtk::Entry::new();
@@ -244,10 +245,25 @@ impl Popup {
         self.delete_button.connect_clicked(move |button| {
             button.set_sensitive(false);
 
-            to_app
-                .send(app::Signal::DeleteTimeEntry(time_entry.id))
-                .expect("Sending message to application thread");
-            window.close();
+            let confirmation_box = gtk::MessageDialog::new(
+                None::<&gtk::Window>,
+                gtk::DialogFlags::empty(),
+                gtk::MessageType::Warning,
+                gtk::ButtonsType::YesNo,
+                "Are you sure you want to delete this entry?"
+            );
+
+            let confirmation_response = confirmation_box.run();
+            confirmation_box.destroy();
+
+            if confirmation_response == gtk::ResponseType::Yes {
+                to_app
+                    .send(app::Signal::DeleteTimeEntry(time_entry.id))
+                    .expect("Sending message to application thread");
+                window.close();
+            } else {
+                button.set_sensitive(true);
+            }
         });
     }
 
