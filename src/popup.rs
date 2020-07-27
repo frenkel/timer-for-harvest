@@ -170,6 +170,7 @@ impl Popup {
         grid.attach(&self.delete_button, 0, 3, 2, 1);
 
         grid.attach(&self.save_button, 2, 3, 2, 1);
+        self.save_button.grab_default();
 
         grid.show_all();
     }
