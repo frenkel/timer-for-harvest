@@ -17,6 +17,7 @@ pub enum Signal {
     StartTimer(u32, u32, String, f32),
     MinutePassed,
     UpdateTimer(u32, u32, u32, String, f32),
+    CheckVersion,
 }
 
 pub struct App {
@@ -104,6 +105,9 @@ impl App {
                         app.update_timer(id, project_id, task_id, notes, hours);
                         app.retrieve_time_entries();
                     }
+                    Signal::CheckVersion => {
+                        app.check_version();
+                    }
                 }
             }
         });
@@ -179,8 +183,15 @@ impl App {
     fn update_timer(&self, id: u32, project_id: u32, task_id: u32, notes: String, hours: f32) {
         for time_entry in &self.time_entries {
             if time_entry.id == id {
-                self.api.update_timer(id, project_id, task_id, notes, hours,
-                        time_entry.is_running, time_entry.spent_date.clone());
+                self.api.update_timer(
+                    id,
+                    project_id,
+                    task_id,
+                    notes,
+                    hours,
+                    time_entry.is_running,
+                    time_entry.spent_date.clone(),
+                );
                 break;
             }
         }
@@ -195,6 +206,47 @@ impl App {
                         time_entry,
                     ))
                     .expect("Sending message to ui thread");
+            }
+        }
+    }
+
+    fn check_version(&self) {
+        let version_string = format!(
+            "{}.{}.{}{}",
+            env!("CARGO_PKG_VERSION_MAJOR"),
+            env!("CARGO_PKG_VERSION_MINOR"),
+            env!("CARGO_PKG_VERSION_PATCH"),
+            option_env!("CARGO_PKG_VERSION_PRE").unwrap_or("")
+        );
+        let current_version = version_compare::Version::from(&version_string).unwrap();
+
+        let mut resolver = resolv::Resolver::new().unwrap();
+
+        let response = resolver.query(
+            b"current-version.timer-for-harvest.frankgroeneveld.nl",
+            resolv::Class::IN,
+            resolv::RecordType::TXT,
+        );
+        match response {
+            Err(_) => {}
+            Ok(mut response) => {
+                for i in 0..response.get_section_count(resolv::Section::Answer) {
+                    let txt: resolv::Record<resolv::record::TXT> =
+                        response.get_record(resolv::Section::Answer, i).unwrap();
+
+                    let latest_version = version_compare::Version::from(&txt.data.dname).unwrap();
+                    if current_version < latest_version {
+                        self.to_ui
+                            .send(ui::Signal::ShowNotice(format!(
+                                "New version available ({}), download it from {}",
+                                txt.data.dname,
+                                        env!("CARGO_PKG_HOMEPAGE"),
+
+                            )))
+                            .expect("Sending message to ui thread");
+                        break;
+                    }
+                }
             }
         }
     }

@@ -2,7 +2,7 @@
 name = "timer-for-harvest"
 description = "Timer for Harvest"
 homepage = "https://github.com/frenkel/timer-for-harvest"
-version = "0.3.1"
+version = "0.3.2"
 authors = ["Frank Groeneveld <frank@frankgroeneveld.nl>"]
 edition = "2018"
 readme = "README.md"
@@ -33,6 +33,8 @@ chrono = "0.4.9"
 glib-sys = "0.9.1"
 hyper = "0.12.30"
 dirs = "2.0.2"
+resolv = "0.2.0"
+version-compare = "0.0.10"
 
 [dependencies.gtk]
 version = "0.7.0"

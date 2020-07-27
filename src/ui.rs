@@ -29,6 +29,7 @@ pub enum Signal {
     OpenPopup(Vec<ProjectAssignment>),
     OpenPopupWithTimeEntry(Vec<ProjectAssignment>, TimeEntry),
     TaskAssignments(Vec<TaskAssignment>),
+    ShowNotice(String)
 }
 
 pub struct Ui {
@@ -63,6 +64,10 @@ impl Ui {
 
         to_app
             .send(app::Signal::RetrieveTimeEntries)
+            .expect("Sending message to application thread");
+
+        to_app
+            .send(app::Signal::CheckVersion)
             .expect("Sending message to application thread");
 
         Ui {
@@ -102,7 +107,15 @@ impl Ui {
                         popup.load_tasks(task_assignments);
                     }
                     None => {}
-                },
+                }
+                Signal::ShowNotice(message) => {
+                    let bar = gtk::InfoBar::new();
+                    let content_area = bar.get_content_area().unwrap();
+                    content_area.downcast::<gtk::Container>().unwrap()
+                            .add(&gtk::Label::new(Some(&message)));
+                    bar.show_all();
+                    ui.grid.attach(&bar, 0, 0, 4, 1);
+                }
             }
             glib::Continue(true)
         });
@@ -187,10 +200,12 @@ impl Ui {
     pub fn set_time_entries(&self, time_entries: Vec<TimeEntry>) {
         let total_entries = time_entries.len() as i32;
         let mut total_hours = 0.0;
-        let mut row_number = total_entries;
+        let mut row_number = total_entries + 1; /* info bar is row 0 */
 
         for child in self.grid.get_children() {
-            self.grid.remove(&child);
+            if !child.is::<gtk::InfoBar>() {
+                self.grid.remove(&child);
+            }
         }
 
         for time_entry in time_entries {
@@ -280,14 +295,14 @@ impl Ui {
         let total_label = gtk::Label::new(Some(&"<b>Total</b>"));
         total_label.set_xalign(0.0);
         total_label.set_use_markup(true);
-        self.grid.attach(&total_label, 0, total_entries + 1, 1, 1);
+        self.grid.attach(&total_label, 0, total_entries + 2, 1, 1);
 
         let formatted_label = format!("<b>{}</b>", f32_to_duration_str(total_hours));
         let total_amount_label = gtk::Label::new(Some(&formatted_label));
         total_amount_label.set_xalign(0.0);
         total_amount_label.set_use_markup(true);
         self.grid
-            .attach(&total_amount_label, 1, total_entries + 1, 1, 1);
+            .attach(&total_amount_label, 1, total_entries + 2, 1, 1);
 
         self.grid.show_all();
     }
