@@ -63,10 +63,6 @@ impl Ui {
         }));
 
         to_app
-            .send(app::Signal::RetrieveTimeEntries)
-            .expect("Sending message to application thread");
-
-        to_app
             .send(app::Signal::CheckVersion)
             .expect("Sending message to application thread");
 
@@ -152,6 +148,14 @@ impl Ui {
                 Inhibit(true)
             } else {
                 Inhibit(false)
+            }
+        }));
+
+        window.connect_property_has_toplevel_focus_notify(clone!(to_app => move |window| {
+            if window.has_toplevel_focus() {
+                println!("Focus");
+                to_app.send(app::Signal::RetrieveTimeEntries)
+                    .expect("Sending message to application thread");
             }
         }));
 
