@@ -177,7 +177,7 @@ impl App {
     }
 
     fn start_timer(&self, project_id: u32, task_id: u32, notes: String, hours: f32) {
-        self.api.start_timer(project_id, task_id, notes, hours);
+        self.api.start_timer(project_id, task_id, notes, hours, &self.shown_date);
     }
 
     fn update_timer(&self, id: u32, project_id: u32, task_id: u32, notes: String, hours: f32) {

@@ -1,4 +1,3 @@
-use chrono::Local;
 use dirs;
 use hyper;
 use serde;
@@ -319,14 +318,14 @@ impl Harvest {
             .expect(&format!("Unexpected user structure: {}", body).to_string())
     }
 
-    pub fn start_timer(&self, project_id: u32, task_id: u32, notes: String, hours: f32) -> TimeEntry {
+    pub fn start_timer(&self, project_id: u32, task_id: u32, notes: String, hours: f32,
+            now: &chrono::NaiveDate) -> TimeEntry {
         let url = "https://api.harvestapp.com/v2/time_entries";
-        let now = Local::now().format("%Y-%m-%d");
         let mut timer = Timer {
             id: None,
             project_id: project_id,
             task_id: task_id,
-            spent_date: Some(now.to_string()),
+            spent_date: Some(now.format("%Y-%m-%d").to_string()),
             notes: None,
             hours: None,
             is_running: true,
