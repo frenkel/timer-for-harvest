@@ -2,7 +2,7 @@
 name = "timer-for-harvest"
 description = "Timer for Harvest"
 homepage = "https://github.com/frenkel/timer-for-harvest"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Frank Groeneveld <frank@frankgroeneveld.nl>"]
 edition = "2018"
 readme = "README.md"
