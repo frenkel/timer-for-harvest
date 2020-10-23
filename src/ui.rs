@@ -153,7 +153,6 @@ impl Ui {
 
         window.connect_property_has_toplevel_focus_notify(clone!(to_app => move |window| {
             if window.has_toplevel_focus() {
-                println!("Focus");
                 to_app.send(app::Signal::RetrieveTimeEntries)
                     .expect("Sending message to application thread");
             }
