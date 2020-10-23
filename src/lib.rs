@@ -32,6 +32,7 @@ pub struct ProjectAssignment {
     pub id: u32,
     pub project: Project,
     pub task_assignments: Vec<TaskAssignment>,
+    pub client: Client,
 }
 
 #[derive(serde::Serialize, serde::Deserialize, Clone)]

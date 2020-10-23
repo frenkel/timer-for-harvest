@@ -98,7 +98,8 @@ impl Popup {
                 &project_store.append(),
                 &[0, 1],
                 &[
-                    &project_assignment.project.name_and_code(),
+                    &format!("{} ({})", project_assignment.project.name_and_code(),
+                            project_assignment.client.name),
                     &project_assignment.project.id,
                 ],
             );
