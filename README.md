@@ -52,3 +52,6 @@ token to a more secure location, such as
 - Authentication token storage in [libsecret](https://wiki.gnome.org/Projects/Libsecret).
 - Support for newlines in the notes entry field. This appears to only be
   possible with an GTK input field that supports markup, which looks strange.
+  
+## Donations
+If you like the software I create, please consider [donating](https://paypal.me/frankgroeneveld).
