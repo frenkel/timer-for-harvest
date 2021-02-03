@@ -28,7 +28,7 @@ pub struct Popup {
     to_app: mpsc::Sender<app::Signal>,
     delete_button: gtk::Button,
     save_button: gtk::Button,
-    notes_input: gtk::Entry,
+    notes_input: gtk::TextView,
     hours_input: gtk::Entry,
     time_entry_id: Option<u32>,
 }
@@ -42,7 +42,7 @@ impl Popup {
         let window = gtk::Window::new(gtk::WindowType::Toplevel);
 
         window.set_title("Add time entry");
-        window.set_default_size(400, 200);
+        window.set_default_size(400, 300);
         window.set_modal(true);
         window.set_type_hint(gdk::WindowTypeHint::Dialog);
         window.set_border_width(18);
@@ -64,17 +64,21 @@ impl Popup {
         window.show_all();
 
         let delete_button = gtk::Button::new_with_label("Delete");
-        delete_button.get_style_context().add_class(&gtk::STYLE_CLASS_DESTRUCTIVE_ACTION);
+        delete_button
+            .get_style_context()
+            .add_class(&gtk::STYLE_CLASS_DESTRUCTIVE_ACTION);
         let save_button = gtk::Button::new_with_label("Start Timer");
         save_button.set_can_default(true);
-        let notes_input = gtk::Entry::new();
+        let notes_input = gtk::TextView::new();
         notes_input
-            .set_property("activates-default", &true)
-            .expect("could not allow default activation");
+            .set_border_width(4);
+        notes_input
+            .set_wrap_mode(gtk::WrapMode::WordChar);
         let hours_input = gtk::Entry::new();
         hours_input
             .set_property("activates-default", &true)
             .expect("could not allow default activation");
+        hours_input.set_placeholder_text(Some("00:00"));
 
         let popup = Popup {
             window: window,
@@ -98,8 +102,11 @@ impl Popup {
                 &project_store.append(),
                 &[0, 1],
                 &[
-                    &format!("{} ({})", project_assignment.project.name_and_code(),
-                            project_assignment.client.name),
+                    &format!(
+                        "{} ({})",
+                        project_assignment.project.name_and_code(),
+                        project_assignment.client.name
+                    ),
                     &project_assignment.project.id,
                 ],
             );
@@ -154,24 +161,28 @@ impl Popup {
 
     fn add_widgets(&self) {
         let grid = gtk::Grid::new();
-        grid.set_column_spacing(12);
+        grid.set_column_spacing(4);
         grid.set_row_spacing(18);
 
         self.window.add(&grid);
 
-        grid.attach(&self.project_chooser, 0, 0, 4, 1);
+        let scrollable_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+        scrollable_window.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
+        scrollable_window.add(&self.notes_input);
+        scrollable_window.set_shadow_type(gtk::ShadowType::Out);
 
-        grid.attach(&self.task_chooser, 0, 1, 4, 1);
-
-        grid.attach(&self.notes_input, 0, 2, 2, 1);
-
-        grid.attach(&self.hours_input, 2, 2, 2, 1);
+        grid.attach(&self.project_chooser, 0, 0, 2, 1);
+        grid.attach(&self.task_chooser, 0, 1, 2, 1);
+        grid.attach(&scrollable_window, 0, 2, 2, 6);
+        grid.attach(&self.hours_input, 1, 8, 1, 1);
 
         self.delete_button.set_sensitive(false);
-        grid.attach(&self.delete_button, 0, 3, 2, 1);
+        grid.attach(&self.delete_button, 0, 9, 1, 2);
 
-        grid.attach(&self.save_button, 2, 3, 2, 1);
+        grid.attach(&self.save_button, 1, 9, 1,2);
         self.save_button.grab_default();
+
+        grid.set_column_homogeneous(true);
 
         grid.show_all();
     }
@@ -197,22 +208,24 @@ impl Popup {
             if project_id > 0 && task_id > 0 {
                 match time_entry_id {
                     None => {
+                        let notes_buffer = notes_input.get_buffer().unwrap();
                         to_app
                             .send(app::Signal::StartTimer(
                                 project_id,
                                 task_id,
-                                notes_input.get_text().unwrap().to_string(),
+                                notes_buffer.get_text(&notes_buffer.get_start_iter(), &notes_buffer.get_end_iter(), false).unwrap().to_string(),
                                 duration_str_to_f32(&hours_input.get_text().unwrap()),
                             ))
                             .expect("Sending message to background thread");
                     }
                     Some(id) => {
+                        let notes_buffer = notes_input.get_buffer().unwrap();
                         to_app
                             .send(app::Signal::UpdateTimer(
                                 id,
                                 project_id,
                                 task_id,
-                                notes_input.get_text().unwrap().to_string(),
+                                notes_buffer.get_text(&notes_buffer.get_start_iter(), &notes_buffer.get_end_iter(), false).unwrap().to_string(),
                                 duration_str_to_f32(&hours_input.get_text().unwrap()),
                             ))
                             .expect("Sending message to background thread");
@@ -246,7 +259,7 @@ impl Popup {
         ));
 
         match &time_entry.notes {
-            Some(n) => self.notes_input.set_text(&n),
+            Some(n) => self.notes_input.get_buffer().unwrap().set_text(&n),
             None => {}
         }
         self.hours_input
@@ -267,7 +280,7 @@ impl Popup {
                 gtk::DialogFlags::empty(),
                 gtk::MessageType::Warning,
                 gtk::ButtonsType::YesNo,
-                "Are you sure you want to delete this entry?"
+                "Are you sure you want to delete this entry?",
             );
 
             let confirmation_response = confirmation_box.run();
