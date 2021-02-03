@@ -215,12 +215,26 @@ impl Ui {
             total_hours += time_entry.hours;
 
             let notes = match time_entry.notes.as_ref() {
-                Some(n) => n
-                    .replace("&", "&amp;")
-                    .replace("<", "&lt;")
-                    .replace(">", "&gt;"),
+                Some(n) => {
+                    let formatted: String = n
+                        .replace("&", "&amp;")
+                        .replace("<", "&lt;")
+                        .replace(">", "&gt;")
+                        .replace("\n\n", "\n")
+                        .replace("\n", " - ")
+                        .chars()
+                        .take(80)
+                        .collect();
+
+                    if n.chars().count() > 80 {
+                        formatted.clone() + "..."
+                    } else {
+                        formatted
+                    }
+                },
                 None => "".to_string(),
             };
+
             let project_client = format!(
                 "<b>{}</b> ({})\n{} - {}",
                 &time_entry.project.name_and_code(),
