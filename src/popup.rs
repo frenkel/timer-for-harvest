@@ -70,10 +70,9 @@ impl Popup {
         let save_button = gtk::Button::new_with_label("Start Timer");
         save_button.set_can_default(true);
         let notes_input = gtk::TextView::new();
-        notes_input
-            .set_border_width(4);
-        notes_input
-            .set_wrap_mode(gtk::WrapMode::WordChar);
+        notes_input.set_border_width(4);
+        notes_input.set_wrap_mode(gtk::WrapMode::WordChar);
+        notes_input.set_accepts_tab(false);
         let hours_input = gtk::Entry::new();
         hours_input
             .set_property("activates-default", &true)
@@ -166,7 +165,8 @@ impl Popup {
 
         self.window.add(&grid);
 
-        let scrollable_window = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+        let scrollable_window =
+            gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
         scrollable_window.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
         scrollable_window.add(&self.notes_input);
         scrollable_window.set_shadow_type(gtk::ShadowType::Out);
@@ -179,7 +179,7 @@ impl Popup {
         self.delete_button.set_sensitive(false);
         grid.attach(&self.delete_button, 0, 9, 1, 2);
 
-        grid.attach(&self.save_button, 1, 9, 1,2);
+        grid.attach(&self.save_button, 1, 9, 1, 2);
         self.save_button.grab_default();
 
         grid.set_column_homogeneous(true);
@@ -213,7 +213,14 @@ impl Popup {
                             .send(app::Signal::StartTimer(
                                 project_id,
                                 task_id,
-                                notes_buffer.get_text(&notes_buffer.get_start_iter(), &notes_buffer.get_end_iter(), false).unwrap().to_string(),
+                                notes_buffer
+                                    .get_text(
+                                        &notes_buffer.get_start_iter(),
+                                        &notes_buffer.get_end_iter(),
+                                        false,
+                                    )
+                                    .unwrap()
+                                    .to_string(),
                                 duration_str_to_f32(&hours_input.get_text().unwrap()),
                             ))
                             .expect("Sending message to background thread");
@@ -225,7 +232,14 @@ impl Popup {
                                 id,
                                 project_id,
                                 task_id,
-                                notes_buffer.get_text(&notes_buffer.get_start_iter(), &notes_buffer.get_end_iter(), false).unwrap().to_string(),
+                                notes_buffer
+                                    .get_text(
+                                        &notes_buffer.get_start_iter(),
+                                        &notes_buffer.get_end_iter(),
+                                        false,
+                                    )
+                                    .unwrap()
+                                    .to_string(),
                                 duration_str_to_f32(&hours_input.get_text().unwrap()),
                             ))
                             .expect("Sending message to background thread");
