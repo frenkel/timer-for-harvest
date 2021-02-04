@@ -141,7 +141,7 @@ impl Project {
 }
 
 impl Harvest {
-    const CLIENT_ID: &'static str = "8ApPquiiqcpFrBt-GX7DhRDN";
+    const CLIENT_ID: &'static str = "ew1-8t73wKHsqmhRNtxwkBaO";
     const CONFIG_FILE_NAME: &'static str = "timer-for-harvest.json";
 
     pub fn new() -> Harvest {
