@@ -319,8 +319,14 @@ impl Harvest {
             .expect(&format!("Unexpected user structure: {}", body).to_string())
     }
 
-    pub fn start_timer(&self, project_id: u32, task_id: u32, notes: String, hours: f32,
-            now: &chrono::NaiveDate) -> TimeEntry {
+    pub fn start_timer(
+        &self,
+        project_id: u32,
+        task_id: u32,
+        notes: String,
+        hours: f32,
+        now: &chrono::NaiveDate,
+    ) -> TimeEntry {
         let url = "https://api.harvestapp.com/v2/time_entries";
         let mut timer = Timer {
             id: None,
@@ -549,4 +555,27 @@ pub fn parse_account_details(request: &str) -> (String, String, String) {
         account_id.to_string(),
         expires_in.to_string(),
     )
+}
+
+pub fn format_timeentry_notes_for_list(n: &str, length: Option<usize>) -> std::string::String {
+    let take: usize = match length {
+        Some(value) => value,
+        None => 80,
+    };
+
+    let formatted: String = n
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\n\n", "\n")
+        .replace("\n", " - ")
+        .chars()
+        .take(take)
+        .collect();
+
+    if n.chars().count() > take {
+        formatted.clone() + "..."
+    } else {
+        formatted
+    }
 }

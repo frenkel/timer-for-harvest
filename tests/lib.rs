@@ -18,19 +18,47 @@ mod test {
 
     #[test]
     fn should_parse_account_id() {
-        assert_eq!("123", timer_for_harvest::parse_account_details("GET /?access_token=abc&scope=harvest%3A123").1);
-        assert_eq!("123", timer_for_harvest::parse_account_details("GET /?scope=harvest%3A123&access_token=abc").1);
+        assert_eq!(
+            "123",
+            timer_for_harvest::parse_account_details("GET /?access_token=abc&scope=harvest%3A123")
+                .1
+        );
+        assert_eq!(
+            "123",
+            timer_for_harvest::parse_account_details("GET /?scope=harvest%3A123&access_token=abc")
+                .1
+        );
     }
 
     #[test]
     fn should_parse_access_token() {
-        assert_eq!("abc", timer_for_harvest::parse_account_details("GET /?access_token=abc&scope=harvest%3A123").0);
-        assert_eq!("abc", timer_for_harvest::parse_account_details("GET /?scope=harvest%3A123&access_token=abc").0);
+        assert_eq!(
+            "abc",
+            timer_for_harvest::parse_account_details("GET /?access_token=abc&scope=harvest%3A123")
+                .0
+        );
+        assert_eq!(
+            "abc",
+            timer_for_harvest::parse_account_details("GET /?scope=harvest%3A123&access_token=abc")
+                .0
+        );
     }
 
     #[test]
     fn should_parse_expires_in() {
-        assert_eq!("123", timer_for_harvest::parse_account_details("GET /?expires_in=123&scope=harvest%3A456").2);
-        assert_eq!("123", timer_for_harvest::parse_account_details("GET /?scope=harvest%3A456&expires_in=123").2);
+        assert_eq!(
+            "123",
+            timer_for_harvest::parse_account_details("GET /?expires_in=123&scope=harvest%3A456").2
+        );
+        assert_eq!(
+            "123",
+            timer_for_harvest::parse_account_details("GET /?scope=harvest%3A456&expires_in=123").2
+        );
+    }
+
+    #[test]
+    fn should_format_timeentry_notes_for_list() {
+        assert_eq!("Lorem Ipsum - 1234567890 - 1234567890 - 1234567890 - 1234567890 - 1234567890 - 1...", timer_for_harvest::format_timeentry_notes_for_list(&"Lorem Ipsum\n\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890", None));
+        assert_eq!("Lorem Ipsum - 1...", timer_for_harvest::format_timeentry_notes_for_list(&"Lorem Ipsum\n\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890\n1234567890", Some(15)));
     }
 }
