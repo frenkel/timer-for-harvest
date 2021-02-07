@@ -29,13 +29,15 @@ pub enum Signal {
     OpenPopup(Vec<ProjectAssignment>),
     OpenPopupWithTimeEntry(Vec<ProjectAssignment>, TimeEntry),
     TaskAssignments(Vec<TaskAssignment>),
-    ShowNotice(String)
+    ShowNotice(String),
 }
 
 pub struct Ui {
     application: gtk::Application,
     header_bar: gtk::HeaderBar,
     grid: gtk::Grid,
+    total_amount_label: gtk::Label,
+    no_time_entries_label: gtk::Label,
     to_app: mpsc::Sender<app::Signal>,
     popup: Option<Popup>,
 }
@@ -48,9 +50,35 @@ impl Ui {
         )
         .unwrap();
         let header_bar = gtk::HeaderBar::new();
+
         let grid = gtk::Grid::new();
         grid.set_column_spacing(12);
         grid.set_row_spacing(18);
+        let no_time_entries_label = gtk::Label::new(Some(&"<b>No entries found</b>"));
+        no_time_entries_label.set_use_markup(true);
+        no_time_entries_label.set_hexpand(true);
+
+        let total_amount_label = gtk::Label::new(None);
+        total_amount_label.set_use_markup(true);
+        total_amount_label.set_label(&"<b>0:00</b>");
+
+        let total_grid = gtk::Grid::new();
+        total_grid.set_border_width(18);
+        total_grid.set_column_spacing(12);
+
+        let total_label = gtk::Label::new(Some(&"<b>Total</b>"));
+        total_label.set_use_markup(true);
+        total_label.set_hexpand(true);
+        total_label.set_xalign(0.0);
+        total_grid.attach(&total_label, 0, 0, 1, 1);
+
+        total_grid.attach_next_to(
+            &total_amount_label,
+            Some(&total_label),
+            gtk::PositionType::Right,
+            1,
+            1,
+        );
 
         application.connect_activate(clone!(to_app, header_bar, grid => move |app| {
             gtk::timeout_add_seconds(60, clone!(to_app => move || {
@@ -59,7 +87,7 @@ impl Ui {
                 glib::Continue(true)
             }));
 
-            Ui::main_window(app, &to_app, &header_bar, &grid);
+            Ui::main_window(app, &to_app, &header_bar, &grid, &total_grid);
         }));
 
         to_app
@@ -70,6 +98,8 @@ impl Ui {
             application: application,
             header_bar: header_bar,
             grid: grid,
+            total_amount_label: total_amount_label,
+            no_time_entries_label: no_time_entries_label,
             to_app: to_app,
             popup: None,
         }
@@ -103,12 +133,14 @@ impl Ui {
                         popup.load_tasks(task_assignments);
                     }
                     None => {}
-                }
+                },
                 Signal::ShowNotice(message) => {
                     let bar = gtk::InfoBar::new();
                     let content_area = bar.get_content_area().unwrap();
-                    content_area.downcast::<gtk::Container>().unwrap()
-                            .add(&gtk::Label::new(Some(&message)));
+                    content_area
+                        .downcast::<gtk::Container>()
+                        .unwrap()
+                        .add(&gtk::Label::new(Some(&message)));
                     bar.show_all();
                     ui.grid.attach(&bar, 0, 0, 4, 1);
                 }
@@ -123,6 +155,7 @@ impl Ui {
         to_app: &mpsc::Sender<app::Signal>,
         header_bar: &gtk::HeaderBar,
         grid: &gtk::Grid,
+        total_grid: &gtk::Grid,
     ) -> gtk::ApplicationWindow {
         let window = gtk::ApplicationWindow::new(application);
 
@@ -131,10 +164,9 @@ impl Ui {
 
         window.set_title("Harvest");
         window.set_titlebar(Some(header_bar));
-        window.set_border_width(18);
         window.set_position(gtk::WindowPosition::Center);
-        window.set_default_size(500, 300);
-        window.set_size_request(500, 300);
+        window.set_default_size(500, 500);
+        window.set_size_request(500, 500);
 
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
         window.connect_key_press_event(clone!(to_app => move |_window, event| {
@@ -194,13 +226,30 @@ impl Ui {
                 .expect("Sending message to application thread");
         }));
 
-        window.add(grid);
+        let scroll_view = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+        scroll_view.set_min_content_height(400);
+        scroll_view.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
+        grid.set_border_width(18);
+        scroll_view.add(grid);
+
+        let content_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        content_box.pack_start(&scroll_view, true, true, 0);
+        content_box.pack_start(total_grid, true, true, 0);
+
+        window.add(&content_box);
+        window.set_resizable(false);
+
         window.show_all();
 
         window
     }
 
-    pub fn set_time_entries(&self, time_entries: Vec<TimeEntry>) {
+    pub fn set_total(&self, total_hours: f32) {
+        let formatted_label = format!("<b>{}</b>", f32_to_duration_str(total_hours));
+        self.total_amount_label.set_label(&formatted_label);
+    }
+
+    pub fn set_time_entries(&mut self, time_entries: Vec<TimeEntry>) {
         let total_entries = time_entries.len() as i32;
         let mut total_hours = 0.0;
         let mut row_number = total_entries + 1; /* info bar is row 0 */
@@ -215,23 +264,7 @@ impl Ui {
             total_hours += time_entry.hours;
 
             let notes = match time_entry.notes.as_ref() {
-                Some(n) => {
-                    let formatted: String = n
-                        .replace("&", "&amp;")
-                        .replace("<", "&lt;")
-                        .replace(">", "&gt;")
-                        .replace("\n\n", "\n")
-                        .replace("\n", " - ")
-                        .chars()
-                        .take(80)
-                        .collect();
-
-                    if n.chars().count() > 80 {
-                        formatted.clone() + "..."
-                    } else {
-                        formatted
-                    }
-                },
+                Some(n) => format_timeentry_notes_for_list(n, None),
                 None => "".to_string(),
             };
 
@@ -309,34 +342,27 @@ impl Ui {
             row_number -= 1;
         }
 
-        let total_label = gtk::Label::new(Some(&"<b>Total</b>"));
-        total_label.set_xalign(0.0);
-        total_label.set_use_markup(true);
-        self.grid.attach(&total_label, 0, total_entries + 2, 1, 1);
+        if total_entries == 0 {
+            self.grid.attach(&self.no_time_entries_label, 0, 0, 1, 1)
+        }
 
-        let formatted_label = format!("<b>{}</b>", f32_to_duration_str(total_hours));
-        let total_amount_label = gtk::Label::new(Some(&formatted_label));
-        total_amount_label.set_xalign(0.0);
-        total_amount_label.set_use_markup(true);
-        self.grid
-            .attach(&total_amount_label, 1, total_entries + 2, 1, 1);
+        self.set_total(total_hours);
 
         self.grid.show_all();
     }
 
-    fn open_popup(&mut self, project_assignments: Vec<ProjectAssignment>,
-            task_assignments: Vec<TaskAssignment>,
-            time_entry: Option<TimeEntry>) {
-        let mut popup = Popup::new(
-            &self.application,
-            project_assignments,
-            self.to_app.clone(),
-        );
+    fn open_popup(
+        &mut self,
+        project_assignments: Vec<ProjectAssignment>,
+        task_assignments: Vec<TaskAssignment>,
+        time_entry: Option<TimeEntry>,
+    ) {
+        let mut popup = Popup::new(&self.application, project_assignments, self.to_app.clone());
 
         popup.load_tasks(task_assignments);
         match time_entry {
             Some(time_entry) => popup.populate(time_entry),
-            None => {},
+            None => {}
         }
         /* call after populate, otherwise task active iter is reset */
         popup.connect_signals();
