@@ -228,7 +228,8 @@ impl Ui {
 
         let scroll_view = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
         scroll_view.set_min_content_height(400);
-        scroll_view.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
+        scroll_view.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Always);
+
         grid.set_border_width(18);
         scroll_view.add(grid);
 
