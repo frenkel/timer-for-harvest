@@ -25,7 +25,7 @@ macro_rules! clone {
 
 pub enum Signal {
     SetTitle(String),
-    SetTimeEntries(Vec<TimeEntry>),
+    SetTimeEntries(Vec<TimeEntry>, Option<bool>),
     OpenPopup(Vec<ProjectAssignment>),
     OpenPopupWithTimeEntry(Vec<ProjectAssignment>, TimeEntry),
     TaskAssignments(Vec<TaskAssignment>),
@@ -38,6 +38,7 @@ pub struct Ui {
     grid: gtk::Grid,
     total_amount_label: gtk::Label,
     no_time_entries_label: gtk::Label,
+    scroll_view: gtk::ScrolledWindow,
     to_app: mpsc::Sender<app::Signal>,
     popup: Option<Popup>,
 }
@@ -54,6 +55,13 @@ impl Ui {
         let grid = gtk::Grid::new();
         grid.set_column_spacing(12);
         grid.set_row_spacing(18);
+        grid.set_border_width(18);
+
+        let scroll_view = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+        scroll_view.set_min_content_height(400);
+        scroll_view.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Always);
+        scroll_view.add(&grid);
+
         let no_time_entries_label = gtk::Label::new(Some(&"<b>No entries found</b>"));
         no_time_entries_label.set_use_markup(true);
         no_time_entries_label.set_hexpand(true);
@@ -80,14 +88,18 @@ impl Ui {
             1,
         );
 
-        application.connect_activate(clone!(to_app, header_bar, grid => move |app| {
+        let content_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
+        content_box.pack_start(&scroll_view, true, true, 0);
+        content_box.pack_start(&total_grid, true, true, 0);
+
+        application.connect_activate(clone!(to_app, header_bar => move |app| {
             gtk::timeout_add_seconds(60, clone!(to_app => move || {
                 to_app.send(app::Signal::MinutePassed)
                     .expect("Sending message to application thread");
                 glib::Continue(true)
             }));
 
-            Ui::main_window(app, &to_app, &header_bar, &grid, &total_grid);
+            Ui::main_window(app, &to_app, &header_bar, &content_box);
         }));
 
         to_app
@@ -100,6 +112,7 @@ impl Ui {
             grid: grid,
             total_amount_label: total_amount_label,
             no_time_entries_label: no_time_entries_label,
+            scroll_view: scroll_view,
             to_app: to_app,
             popup: None,
         }
@@ -112,8 +125,8 @@ impl Ui {
                 Signal::SetTitle(value) => {
                     ui.header_bar.set_title(Some(&value));
                 }
-                Signal::SetTimeEntries(time_entries) => {
-                    ui.set_time_entries(time_entries);
+                Signal::SetTimeEntries(time_entries, scroll_bottom) => {
+                    ui.set_time_entries(time_entries, scroll_bottom);
                 }
                 Signal::OpenPopup(project_assignments) => {
                     ui.open_popup(project_assignments, vec![], None);
@@ -154,8 +167,7 @@ impl Ui {
         application: &gtk::Application,
         to_app: &mpsc::Sender<app::Signal>,
         header_bar: &gtk::HeaderBar,
-        grid: &gtk::Grid,
-        total_grid: &gtk::Grid,
+        content_box: &gtk::Box,
     ) -> gtk::ApplicationWindow {
         let window = gtk::ApplicationWindow::new(application);
 
@@ -226,18 +238,7 @@ impl Ui {
                 .expect("Sending message to application thread");
         }));
 
-        let scroll_view = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
-        scroll_view.set_min_content_height(400);
-        scroll_view.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Always);
-
-        grid.set_border_width(18);
-        scroll_view.add(grid);
-
-        let content_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
-        content_box.pack_start(&scroll_view, true, true, 0);
-        content_box.pack_start(total_grid, true, true, 0);
-
-        window.add(&content_box);
+        window.add(content_box);
         window.set_resizable(false);
 
         window.show_all();
@@ -250,7 +251,7 @@ impl Ui {
         self.total_amount_label.set_label(&formatted_label);
     }
 
-    pub fn set_time_entries(&mut self, time_entries: Vec<TimeEntry>) {
+    pub fn set_time_entries(&mut self, time_entries: Vec<TimeEntry>, scroll_bottom: Option<bool>) {
         let total_entries = time_entries.len() as i32;
         let mut total_hours = 0.0;
         let mut row_number = total_entries + 1; /* info bar is row 0 */
@@ -350,6 +351,16 @@ impl Ui {
         self.set_total(total_hours);
 
         self.grid.show_all();
+
+        match scroll_bottom {
+            Some(scroll) => {
+                if scroll {
+                    let adjustment = self.scroll_view.get_vadjustment().unwrap();
+                    adjustment.set_value(adjustment.get_upper() - adjustment.get_page_size());
+                }
+            }
+            None => {}
+        }
     }
 
     fn open_popup(

@@ -57,7 +57,7 @@ impl App {
             for signal in from_ui {
                 match signal {
                     Signal::RetrieveTimeEntries => {
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(None);
                     }
                     Signal::NewTimeEntry => {
                         app.to_ui
@@ -69,41 +69,41 @@ impl App {
                     }
                     Signal::RestartTimeEntry(id) => {
                         app.restart_timer(id);
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(None);
                     }
                     Signal::StopTimeEntry(id) => {
                         app.stop_timer(id);
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(None);
                     }
                     Signal::DeleteTimeEntry(id) => {
                         app.api.delete_timer(id);
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(None);
                     }
                     Signal::PrevDate => {
                         app.shown_date = app.shown_date.pred();
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(None);
                     }
                     Signal::NextDate => {
                         app.shown_date = app.shown_date.succ();
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(None);
                     }
                     Signal::TodayDate => {
                         app.shown_date = chrono::Local::today().naive_local();
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(None);
                     }
                     Signal::LoadTasksForProject(id) => {
                         app.retrieve_tasks_for_project(id);
                     }
                     Signal::StartTimer(project_id, task_id, notes, hours) => {
                         app.start_timer(project_id, task_id, notes, hours);
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(Some(true));
                     }
                     Signal::MinutePassed => {
                         app.increment_running_timer();
                     }
                     Signal::UpdateTimer(id, project_id, task_id, notes, hours) => {
                         app.update_timer(id, project_id, task_id, notes, hours);
-                        app.retrieve_time_entries();
+                        app.retrieve_time_entries(None);
                     }
                     Signal::CheckVersion => {
                         app.check_version();
@@ -120,7 +120,7 @@ impl App {
             .expect("Sending message to ui thread");
     }
 
-    fn retrieve_time_entries(&mut self) {
+    fn retrieve_time_entries(&mut self, scroll_bottom: Option<bool>) {
         self.to_ui
             .send(ui::Signal::SetTitle("Loading...".to_string()))
             .expect("Sending message to ui thread");
@@ -131,7 +131,10 @@ impl App {
         );
 
         self.to_ui
-            .send(ui::Signal::SetTimeEntries(self.time_entries.clone()))
+            .send(ui::Signal::SetTimeEntries(
+                self.time_entries.clone(),
+                scroll_bottom,
+            ))
             .expect("Sending message to ui thread");
         self.format_and_send_title();
     }
@@ -144,7 +147,10 @@ impl App {
         }
 
         self.to_ui
-            .send(ui::Signal::SetTimeEntries(self.time_entries.clone()))
+            .send(ui::Signal::SetTimeEntries(
+                self.time_entries.clone(),
+                Some(false),
+            ))
             .expect("Sending message to ui thread");
         self.format_and_send_title();
     }
@@ -177,7 +183,8 @@ impl App {
     }
 
     fn start_timer(&self, project_id: u32, task_id: u32, notes: String, hours: f32) {
-        self.api.start_timer(project_id, task_id, notes, hours, &self.shown_date);
+        self.api
+            .start_timer(project_id, task_id, notes, hours, &self.shown_date);
     }
 
     fn update_timer(&self, id: u32, project_id: u32, task_id: u32, notes: String, hours: f32) {
@@ -240,8 +247,7 @@ impl App {
                             .send(ui::Signal::ShowNotice(format!(
                                 "New version available ({}), download it from {}",
                                 txt.data.dname,
-                                        env!("CARGO_PKG_HOMEPAGE"),
-
+                                env!("CARGO_PKG_HOMEPAGE"),
                             )))
                             .expect("Sending message to ui thread");
                         break;
