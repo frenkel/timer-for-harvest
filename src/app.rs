@@ -57,7 +57,7 @@ impl App {
             for signal in from_ui {
                 match signal {
                     Signal::RetrieveTimeEntries => {
-                        app.retrieve_time_entries(None);
+                        app.retrieve_time_entries(false);
                     }
                     Signal::NewTimeEntry => {
                         app.to_ui
@@ -69,41 +69,41 @@ impl App {
                     }
                     Signal::RestartTimeEntry(id) => {
                         app.restart_timer(id);
-                        app.retrieve_time_entries(None);
+                        app.retrieve_time_entries(false);
                     }
                     Signal::StopTimeEntry(id) => {
                         app.stop_timer(id);
-                        app.retrieve_time_entries(None);
+                        app.retrieve_time_entries(false);
                     }
                     Signal::DeleteTimeEntry(id) => {
                         app.api.delete_timer(id);
-                        app.retrieve_time_entries(None);
+                        app.retrieve_time_entries(false);
                     }
                     Signal::PrevDate => {
                         app.shown_date = app.shown_date.pred();
-                        app.retrieve_time_entries(None);
+                        app.retrieve_time_entries(false);
                     }
                     Signal::NextDate => {
                         app.shown_date = app.shown_date.succ();
-                        app.retrieve_time_entries(None);
+                        app.retrieve_time_entries(false);
                     }
                     Signal::TodayDate => {
                         app.shown_date = chrono::Local::today().naive_local();
-                        app.retrieve_time_entries(None);
+                        app.retrieve_time_entries(false);
                     }
                     Signal::LoadTasksForProject(id) => {
                         app.retrieve_tasks_for_project(id);
                     }
                     Signal::StartTimer(project_id, task_id, notes, hours) => {
                         app.start_timer(project_id, task_id, notes, hours);
-                        app.retrieve_time_entries(Some(true));
+                        app.retrieve_time_entries(true);
                     }
                     Signal::MinutePassed => {
                         app.increment_running_timer();
                     }
                     Signal::UpdateTimer(id, project_id, task_id, notes, hours) => {
                         app.update_timer(id, project_id, task_id, notes, hours);
-                        app.retrieve_time_entries(None);
+                        app.retrieve_time_entries(false);
                     }
                     Signal::CheckVersion => {
                         app.check_version();
@@ -120,7 +120,7 @@ impl App {
             .expect("Sending message to ui thread");
     }
 
-    fn retrieve_time_entries(&mut self, scroll_bottom: Option<bool>) {
+    fn retrieve_time_entries(&mut self, scroll_bottom: bool) {
         self.to_ui
             .send(ui::Signal::SetTitle("Loading...".to_string()))
             .expect("Sending message to ui thread");
@@ -147,10 +147,7 @@ impl App {
         }
 
         self.to_ui
-            .send(ui::Signal::SetTimeEntries(
-                self.time_entries.clone(),
-                Some(false),
-            ))
+            .send(ui::Signal::SetTimeEntries(self.time_entries.clone(), false))
             .expect("Sending message to ui thread");
         self.format_and_send_title();
     }
