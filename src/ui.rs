@@ -25,7 +25,7 @@ macro_rules! clone {
 
 pub enum Signal {
     SetTitle(String),
-    SetTimeEntries(Vec<TimeEntry>, bool),
+    SetTimeEntries(Vec<TimeEntry>, Option<bool>),
     OpenPopup(Vec<ProjectAssignment>),
     OpenPopupWithTimeEntry(Vec<ProjectAssignment>, TimeEntry),
     TaskAssignments(Vec<TaskAssignment>),
@@ -251,11 +251,10 @@ impl Ui {
         self.total_amount_label.set_label(&formatted_label);
     }
 
-    pub fn set_time_entries(&self, time_entries: Vec<TimeEntry>, scroll_bottom: bool) {
+    pub fn set_time_entries(&mut self, time_entries: Vec<TimeEntry>, scroll_bottom: Option<bool>) {
         let total_entries = time_entries.len() as i32;
         let mut total_hours = 0.0;
         let mut row_number = total_entries + 1; /* info bar is row 0 */
-        let scroll_view = &self.scroll_view;
 
         for child in self.grid.get_children() {
             if !child.is::<gtk::InfoBar>() {
@@ -353,15 +352,14 @@ impl Ui {
 
         self.grid.show_all();
 
-        if scroll_bottom {
-            gtk::timeout_add(
-                300,
-                clone!(scroll_view => move || {
-                    let adj = scroll_view.get_vadjustment().unwrap();
-                    adj.set_value(adj.get_upper() - adj.get_page_size());
-                    return Continue(false);
-                }),
-            );
+        match scroll_bottom {
+            Some(scroll) => {
+                if scroll {
+                    let adjustment = self.scroll_view.get_vadjustment().unwrap();
+                    adjustment.set_value(adjustment.get_upper() - adjustment.get_page_size());
+                }
+            }
+            None => {}
         }
     }
 
