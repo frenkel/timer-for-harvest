@@ -177,7 +177,8 @@ impl App {
     }
 
     fn start_timer(&self, project_id: u32, task_id: u32, notes: String, hours: f32) {
-        self.api.start_timer(project_id, task_id, notes, hours, &self.shown_date);
+        self.api
+            .start_timer(project_id, task_id, notes, hours, &self.shown_date);
     }
 
     fn update_timer(&self, id: u32, project_id: u32, task_id: u32, notes: String, hours: f32) {
@@ -240,8 +241,7 @@ impl App {
                             .send(ui::Signal::ShowNotice(format!(
                                 "New version available ({}), download it from {}",
                                 txt.data.dname,
-                                        env!("CARGO_PKG_HOMEPAGE"),
-
+                                env!("CARGO_PKG_HOMEPAGE"),
                             )))
                             .expect("Sending message to ui thread");
                         break;
