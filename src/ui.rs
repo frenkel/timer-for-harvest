@@ -2,7 +2,9 @@ use crate::app;
 use crate::popup::Popup;
 use gio::prelude::*;
 use gtk::prelude::*;
+use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::mpsc;
+use std::sync::Arc;
 use timer_for_harvest::*;
 
 /* handy gtk callback clone macro taken from https://gtk-rs.org/docs-src/tutorial/closures */
@@ -239,6 +241,19 @@ impl Ui {
 
         window.add(&content_box);
         window.set_resizable(false);
+
+        let current_height = Arc::new(AtomicI32::new(0));
+        grid.connect_size_allocate(
+            clone!(scroll_view, current_height => move |_grid, allocation| {
+                if allocation.height > current_height.load(Ordering::SeqCst) {
+                    let adj = scroll_view.get_vadjustment().unwrap();
+                    adj.set_value(adj.get_upper() - adj.get_page_size());
+                    current_height.store(allocation.height, Ordering::SeqCst);
+                } else if allocation.height < current_height.load(Ordering::SeqCst) {
+                    current_height.store(allocation.height, Ordering::SeqCst);
+                }
+            }),
+        );
 
         window.show_all();
 
