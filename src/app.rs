@@ -239,9 +239,10 @@ impl App {
                     if current_version < latest_version {
                         self.to_ui
                             .send(ui::Signal::ShowNotice(format!(
-                                "New version available ({}), download it from {}",
+                                "New version available ({}), download it from <a href=\"{}\">{}</a>",
                                 txt.data.dname,
                                 env!("CARGO_PKG_HOMEPAGE"),
+                                env!("CARGO_PKG_HOMEPAGE")
                             )))
                             .expect("Sending message to ui thread");
                         break;
