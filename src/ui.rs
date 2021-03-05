@@ -139,10 +139,13 @@ impl Ui {
                 Signal::ShowNotice(message) => {
                     let bar = gtk::InfoBar::new();
                     let content_area = bar.get_content_area().unwrap();
+                    let label = gtk::Label::new(None);
+                    label.set_markup(&message);
+
                     content_area
                         .downcast::<gtk::Container>()
                         .unwrap()
-                        .add(&gtk::Label::new(Some(&message)));
+                        .add(&label);
                     bar.show_all();
                     ui.grid.attach(&bar, 0, 0, 4, 1);
                 }
