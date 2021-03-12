@@ -557,16 +557,23 @@ pub fn parse_account_details(request: &str) -> (String, String, String) {
     )
 }
 
+pub fn escape_html(subject: &str) -> String {
+    subject
+        .replace("&", "&amp;")
+        .replace("<", "&lt;")
+        .replace(">", "&gt;")
+        .replace("\"", "&quot;")
+        .replace("'", "&#x27;")
+        .replace("`", "&#x60;")
+}
+
 pub fn format_timeentry_notes_for_list(n: &str, length: Option<usize>) -> std::string::String {
     let take: usize = match length {
         Some(value) => value,
         None => 80,
     };
 
-    let formatted: String = n
-        .replace("&", "&amp;")
-        .replace("<", "&lt;")
-        .replace(">", "&gt;")
+    let formatted: String = escape_html(n)
         .replace("\n\n", "\n")
         .replace("\n", " - ")
         .chars()

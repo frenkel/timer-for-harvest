@@ -289,9 +289,9 @@ impl Ui {
 
             let project_client = format!(
                 "<b>{}</b> ({})\n{} - {}",
-                &time_entry.project.name_and_code(),
-                &time_entry.client.name,
-                &time_entry.task.name,
+                &escape_html(&time_entry.project.name_and_code()),
+                &escape_html(&time_entry.client.name),
+                &escape_html(&time_entry.task.name),
                 &notes
             );
             let project_label = gtk::Label::new(Some(&project_client));
