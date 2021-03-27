@@ -50,6 +50,11 @@ token to a more secure location, such as
 - Idle detection to ask user whether idle time should be subtracted or booked
   as a new time entry.
 - Authentication token storage in [libsecret](https://wiki.gnome.org/Projects/Libsecret).
+
+## Building
+If you want to build the applicatin yourself you'll need rust, cargo and the gtk3
+development libraries installed. You can then run `cargo build --release` to generate
+the binary in `target/release/`.
   
 ## Donations
 If you like the software I create, please consider [donating](https://paypal.me/frankgroeneveld).
