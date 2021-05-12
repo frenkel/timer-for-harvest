@@ -51,7 +51,6 @@ token to a more secure location, such as
   as a new time entry.
 - Authentication token storage in [libsecret](https://wiki.gnome.org/Projects/Libsecret).
 - [Improve UI](https://github.com/frenkel/timer-for-harvest/issues/34) to speed up the new entry process.
-- Move all Github release history into a CHANGELOG.md in the repo.
 
 ## Building
 If you want to build the applicatin yourself you'll need rust, cargo and the gtk3
