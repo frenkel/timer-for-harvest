@@ -30,9 +30,8 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(to_ui: glib::Sender<ui::Signal>) -> App {
+    pub fn new(to_ui: glib::Sender<ui::Signal>, api: Harvest) -> App {
         let now = chrono::Local::today().naive_local();
-        let api = Harvest::new();
         let user = api.current_user();
         let mut project_assignments = api.active_project_assignments();
         project_assignments.sort_by(|a, b| {

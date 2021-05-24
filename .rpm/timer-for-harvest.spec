@@ -24,6 +24,9 @@ rm -rf %{buildroot}
 mkdir -p %{buildroot}
 cp -a * %{buildroot}
 
+%post
+update-desktop-database
+
 %clean
 rm -rf %{buildroot}
 
