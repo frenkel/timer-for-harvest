@@ -17,11 +17,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         let (to_ui, from_app) = glib::MainContext::channel(glib::PRIORITY_DEFAULT);
         let (to_app, from_ui) = mpsc::channel();
 
-        let app = App::new(to_ui);
-        let ui = Ui::new(to_app);
+        let api = Harvest::new(args.get(1));
+        match api {
+            None => return Ok(()),
+            Some(harvest) => {
+                let app = App::new(to_ui, harvest);
+                let ui = Ui::new(to_app);
 
-        App::handle_ui_signals(app, from_ui);
-        Ui::handle_app_signals(ui, from_app);
+                App::handle_ui_signals(app, from_ui);
+                Ui::handle_app_signals(ui, from_app);
+            }
+        }
     }
 
     Ok(())

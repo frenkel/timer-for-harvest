@@ -5,9 +5,6 @@ use serde_json::json;
 use std::fs::write;
 use std::fs::File;
 use std::io::Read;
-use std::io::Write;
-use std::net::TcpListener;
-use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::Command;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -141,10 +138,29 @@ impl Project {
 }
 
 impl Harvest {
-    const CLIENT_ID: &'static str = "ew1-8t73wKHsqmhRNtxwkBaO";
+    const CLIENT_ID: &'static str = "FIIdlyIeQePrcw9O_cYQ_GKe";
     const CONFIG_FILE_NAME: &'static str = "timer-for-harvest.json";
 
-    pub fn new() -> Harvest {
+    pub fn new(token_url: Option<&String>) -> Option<Harvest> {
+        match token_url {
+            Some(url) => {
+                let result = parse_account_details(&url);
+
+                let unix_timestamp = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs();
+                let expires_in: u64 = result.2.parse().unwrap();
+
+                let harvest = Harvest {
+                    token: result.0,
+                    account_id: result.1.parse().unwrap(),
+                    expires_at: unix_timestamp + expires_in,
+                };
+                harvest.write_authorization_to_file();
+            },
+            None => {}
+        }
         match Harvest::read_authorization_from_file() {
             Some(harvest) => {
                 let unix_timestamp = SystemTime::now()
@@ -154,18 +170,20 @@ impl Harvest {
                 let one_day = 60 * 60 * 24;
 
                 if harvest.expires_at < unix_timestamp + one_day {
-                    Harvest::obtain_new_authorization()
+                    Harvest::obtain_new_authorization();
+                    return None;
                 } else {
-                    return harvest;
+                    return Some(harvest);
                 }
             }
-            None => Harvest::obtain_new_authorization(),
+            None => {
+                Harvest::obtain_new_authorization();
+                return None;
+            }
         }
     }
 
-    fn obtain_new_authorization() -> Harvest {
-        let listener = TcpListener::bind("127.0.0.1:12345").expect("Port 12345 is already in use");
-
+    fn obtain_new_authorization() {
         Command::new("xdg-open")
             .arg(format!(
                 "https://id.getharvest.com/oauth2/authorize?client_id={}&response_type=token",
@@ -173,27 +191,6 @@ impl Harvest {
             ))
             .spawn()
             .expect("Unable to open browser");
-
-        for stream in listener.incoming() {
-            let stream = stream.unwrap();
-            let result = Harvest::authorize_callback(stream);
-
-            let unix_timestamp = SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs();
-            let expires_in: u64 = result.2.parse().unwrap();
-
-            let harvest = Harvest {
-                token: result.0,
-                account_id: result.1.parse().unwrap(),
-                expires_at: unix_timestamp + expires_in,
-            };
-            harvest.write_authorization_to_file();
-            return harvest;
-        }
-
-        panic!("unable to authorize");
     }
 
     fn read_authorization_from_file() -> Option<Harvest> {
@@ -219,42 +216,6 @@ impl Harvest {
         let mut path = dirs::config_dir().expect("Unable to find XDG config dir path");
         path.push(Harvest::CONFIG_FILE_NAME);
         path
-    }
-
-    fn authorize_callback(mut stream: TcpStream) -> (String, String, String) {
-        let mut buffer = [0; 512];
-        let mut first_line = "".to_string();
-
-        loop {
-            match stream.read(&mut buffer) {
-                Ok(n) => {
-                    if first_line == "" {
-                        let request = String::from_utf8_lossy(&buffer[..]).to_string();
-                        first_line = request.lines().next().unwrap().to_string();
-                    }
-                    if n < buffer.len() {
-                        break;
-                    }
-                }
-                Err(_) => {
-                    panic!("unable to read request");
-                }
-            }
-        }
-
-        let result = parse_account_details(&first_line);
-
-        let response = "HTTP/1.1 200 OK\r\n\r\n<!DOCTYPE html>
-            <html>
-                <body>
-                    Authorized successfully
-                </body>
-            </html>\r\n";
-
-        stream.write(response.as_bytes()).unwrap();
-        stream.flush().unwrap();
-
-        result
     }
 
     pub fn user_agent() -> String {
@@ -524,8 +485,8 @@ pub fn f32_to_duration_str(duration: f32) -> String {
 
 /* TODO improve this messy parse function */
 pub fn parse_account_details(request: &str) -> (String, String, String) {
-    let mut parts = request.split(" ");
-    parts.next(); /* GET */
+    let mut parts = request.split("://");
+    parts.next(); /* tfh */
     let uri = parts.next().unwrap().parse::<hyper::Uri>().unwrap();
     let parts = uri.query().unwrap().split("&");
     let mut access_token = "";
