@@ -15,6 +15,7 @@ assets = [
     ["target/release/timer-for-harvest", "usr/bin/", "755"],
     ["assets/timer-for-harvest.desktop", "usr/share/applications/", "644"],
 ]
+depends = "libgtk-3-0, libssl1.1, desktop-file-utils"
 
 [package.metadata.rpm.cargo]
 buildflags = ["--release"]

@@ -9,5 +9,5 @@ USER user
 WORKDIR /home/user
 
 RUN cargo install cargo-deb
-COPY . .
+COPY --chown=user . .
 RUN cargo deb
