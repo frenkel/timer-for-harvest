@@ -79,6 +79,16 @@ impl Popup {
             .expect("could not allow default activation");
         hours_input.set_placeholder_text(Some("00:00"));
 
+        hours_input.connect_changed(
+            clone!(save_button => move |hours_input| {
+                if &hours_input.get_text().unwrap() != "" {
+                    save_button.set_label("Save Timer");
+                } else {
+                    save_button.set_label("Start Timer");
+                }
+            }),
+        );
+
         let popup = Popup {
             window: window,
             project_chooser: Popup::project_chooser(project_assignments),
