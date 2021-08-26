@@ -2,19 +2,21 @@
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+## [0.3.7] - 2021-08-26
+
 - Show correct button label when adding hours instead of starting a new timer, implemented by @mlunax.
 - Fixed a crash on resume-from-suspend because the time entries could not load while network was not up yet.
 
-## [0.3.6] - 2020-03-12
+## [0.3.6] - 2021-03-12
 
 This release includes escaping for special characters such as & in task, project en client names. Thanks @wvengen for reporting this bug.
 Furthermore the update link is now clickable thanks to @iatanas0v.
 
-## [0.3.5] - 2020-02-26
+## [0.3.5] - 2021-02-26
 
 Thanks to @KillerCodeMonkey we have another release! This time he contributed changes to the main window that keep it a static size with a scrollbar. Thanks again @KillerCodeMonkey!
 
-## [0.3.4] - 2020-02-05
+## [0.3.4] - 2021-02-05
 
 Thanks to @KillerCodeMonkey we now have multi-line description support!
 We also had to switch to a different client\_id for the authorization at Harvest. You shouldn't notice this but we're reporting this so that you know it is not a security incident.
