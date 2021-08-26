@@ -278,8 +278,8 @@ impl Harvest {
                 "https://api.harvestapp.com/v2/users/me/project_assignments?page={}",
                 current_page
             );
-            let mut res = self.api_get_request(&url);
-            let body = &res.text().unwrap();
+            let res = self.api_get_request(&url);
+            let body = &res.unwrap().text().unwrap();
             let page: ProjectAssignmentPage = serde_json::from_str(body).expect(
                 &format!("Unexpected project assignment page structure: {}", body).to_string(),
             );
@@ -303,18 +303,22 @@ impl Harvest {
             "https://api.harvestapp.com/v2/time_entries?user_id={}&from={}&to={}",
             user.id, from, till
         );
-        let mut res = self.api_get_request(&url);
-        let body = &res.text().unwrap();
-        let page: TimeEntryPage = serde_json::from_str(body)
-            .expect(&format!("Unexpected time entry page structure: {}", body).to_string());
+        match self.api_get_request(&url) {
+            Ok(mut res) => {
+                let body = &res.text().unwrap();
+                let page: TimeEntryPage = serde_json::from_str(body)
+                    .expect(&format!("Unexpected time entry page structure: {}", body).to_string());
 
-        page.time_entries
+                page.time_entries
+            }
+            Err(_e) => Vec::new(),
+        }
     }
 
     pub fn current_user(&self) -> User {
         let url = "https://api.harvestapp.com/v2/users/me";
-        let mut res = self.api_get_request(&url);
-        let body = &res.text().unwrap();
+        let res = self.api_get_request(&url);
+        let body = &res.unwrap().text().unwrap();
         serde_json::from_str(body)
             .expect(&format!("Unexpected user structure: {}", body).to_string())
     }
@@ -427,7 +431,7 @@ impl Harvest {
             .expect(&format!("Unexpected timer structure: {}", body).to_string())
     }
 
-    fn api_get_request(&self, url: &str) -> reqwest::Response {
+    fn api_get_request(&self, url: &str) -> Result<reqwest::Response, reqwest::Error> {
         let client = reqwest::Client::new();
 
         client
@@ -436,7 +440,6 @@ impl Harvest {
             .header("Harvest-Account-Id", format!("{}", self.account_id))
             .header("User-Agent", Harvest::user_agent())
             .send()
-            .unwrap()
     }
 
     fn api_post_request<T: serde::Serialize + ?Sized>(

@@ -3,6 +3,7 @@
 ## [UNRELEASED] - YYYY-MM-DD
 
 - Show correct button label when adding hours instead of starting a new timer, implemented by @mlunax.
+- Fixed a crash on resume-from-suspend because the time entries could not load while network was not up yet.
 
 ## [0.3.6] - 2020-03-12
 
