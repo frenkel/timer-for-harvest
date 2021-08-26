@@ -2,6 +2,8 @@
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+- Show correct button label when adding hours instead of starting a new timer, implemented by @mlunax.
+
 ## [0.3.6] - 2020-03-12
 
 This release includes escaping for special characters such as & in task, project en client names. Thanks @wvengen for reporting this bug.
