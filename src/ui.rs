@@ -173,17 +173,8 @@ impl Ui {
         window.set_position(gtk::WindowPosition::Center);
 
         // set default window size by env
-        let mut a_h: i32 = 500;
-        let mut a_w: i32 = 500;
-        match env::var("TFH_SIZE_H") {
-            Ok(val) => {a_h = val.parse().unwrap_or(500)},
-            Err(_e) => {},
-        }
-        match env::var("TFH_SIZE_W") {
-            Ok(val) => {a_w = val.parse().unwrap_or(500)},
-            Err(_e) => {},
-        }
-        println!("H:{} W:{}", a_h, a_w);
+        let a_h: i32 = env::var("TFH_SIZE_H").unwrap_or(String::new()).parse().unwrap_or(500);
+        let a_w: i32 = env::var("TFH_SIZE_W").unwrap_or(String::new()).parse().unwrap_or(500);
         window.set_default_size(a_w, a_h);
         window.set_size_request(a_w, a_h);
 
