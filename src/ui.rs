@@ -173,8 +173,8 @@ impl Ui {
         window.set_position(gtk::WindowPosition::Center);
 
         // set default window size by env
-        let a_h: i32 = env::var("TFH_SIZE_H").unwrap_or(String::new()).parse().unwrap_or(500);
-        let a_w: i32 = env::var("TFH_SIZE_W").unwrap_or(String::new()).parse().unwrap_or(500);
+        let a_w: i32 = env::var("TFH_SIZE_W").unwrap_or(String::new()).parse().unwrap_or(960);
+        let a_h: i32 = env::var("TFH_SIZE_H").unwrap_or(String::new()).parse().unwrap_or(540);
         window.set_default_size(a_w, a_h);
         window.set_size_request(a_w, a_h);
 
@@ -245,10 +245,10 @@ impl Ui {
 
         let content_box = gtk::Box::new(gtk::Orientation::Vertical, 0);
         content_box.pack_start(&scroll_view, true, true, 0);
-        content_box.pack_start(total_grid, true, true, 0);
+        content_box.pack_start(total_grid, false, false, 0);
 
         window.add(&content_box);
-        window.set_resizable(false);
+        //window.set_resizable(false);
 
         let current_height = Arc::new(AtomicI32::new(0));
         grid.connect_size_allocate(
