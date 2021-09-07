@@ -5,6 +5,7 @@ use gtk::prelude::*;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
+use std::env;
 use timer_for_harvest::*;
 
 /* handy gtk callback clone macro taken from https://gtk-rs.org/docs-src/tutorial/closures */
@@ -170,8 +171,21 @@ impl Ui {
         window.set_title("Harvest");
         window.set_titlebar(Some(header_bar));
         window.set_position(gtk::WindowPosition::Center);
-        window.set_default_size(500, 500);
-        window.set_size_request(500, 500);
+
+        // set default window size by env
+        let mut a_h: i32 = 500;
+        let mut a_w: i32 = 500;
+        match env::var("TFH_SIZE_H") {
+            Ok(val) => {a_h = val.parse().unwrap_or(500)},
+            Err(_e) => {},
+        }
+        match env::var("TFH_SIZE_W") {
+            Ok(val) => {a_w = val.parse().unwrap_or(500)},
+            Err(_e) => {},
+        }
+        println!("H:{} W:{}", a_h, a_w);
+        window.set_default_size(a_w, a_h);
+        window.set_size_request(a_w, a_h);
 
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
         window.connect_key_press_event(clone!(to_app => move |_window, event| {
