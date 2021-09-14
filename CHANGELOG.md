@@ -2,6 +2,8 @@
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+- Re-enable the ability to resize the main window, implemented by @mlunax.
+
 ## [0.3.7] - 2021-08-26
 
 - Show correct button label when adding hours instead of starting a new timer, implemented by @mlunax.

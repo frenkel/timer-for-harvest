@@ -2,10 +2,10 @@ use crate::app;
 use crate::popup::Popup;
 use gio::prelude::*;
 use gtk::prelude::*;
+use std::env;
 use std::sync::atomic::{AtomicI32, Ordering};
 use std::sync::mpsc;
 use std::sync::Arc;
-use std::env;
 use timer_for_harvest::*;
 
 /* handy gtk callback clone macro taken from https://gtk-rs.org/docs-src/tutorial/closures */
@@ -173,8 +173,14 @@ impl Ui {
         window.set_position(gtk::WindowPosition::Center);
 
         // set default window size by env
-        let a_w: i32 = env::var("TFH_SIZE_W").unwrap_or(String::new()).parse().unwrap_or(960);
-        let a_h: i32 = env::var("TFH_SIZE_H").unwrap_or(String::new()).parse().unwrap_or(540);
+        let a_w: i32 = env::var("TFH_SIZE_W")
+            .unwrap_or(String::new())
+            .parse()
+            .unwrap_or(500);
+        let a_h: i32 = env::var("TFH_SIZE_H")
+            .unwrap_or(String::new())
+            .parse()
+            .unwrap_or(500);
         window.set_default_size(a_w, a_h);
         window.set_size_request(a_w, a_h);
 
