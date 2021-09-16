@@ -59,4 +59,6 @@ development libraries installed. You can then run `cargo build --release` to gen
 the binary in `target/release/`.
   
 ## Donations
-If you like the software I create, please consider [donating](https://paypal.me/frankgroeneveld).
+If you like the software I create, please consider donating through
+[Paypal](https://paypal.me/frankgroeneveld) or
+[Github Sponsors](https://github.com/sponsors/frenkel).
