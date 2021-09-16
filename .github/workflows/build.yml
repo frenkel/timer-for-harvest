@@ -17,6 +17,7 @@ jobs:
           
       - run: cargo deb
       - run: cargo rpm build
+      - run: find target/release/rpmbuild
 
       - uses: actions/upload-artifact@v2
         with:
