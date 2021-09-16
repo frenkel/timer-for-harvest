@@ -28,9 +28,10 @@ jobs:
         with:
           key: target-dir-cache-release
           path: target/
-      
+          
       - run: cargo deb
+
       - uses: actions/upload-artifact@v2
         with:
           name: debian-package
-          path: target/debian/timer-for-harvest_\*_amd64.deb"
+          path: target/debian/timer-for-harvest_*_amd64.deb
