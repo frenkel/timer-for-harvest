@@ -18,10 +18,13 @@ jobs:
       - run: cargo deb
       - run: cargo rpm build
       - run: find target/release/rpmbuild
+      
+      - run: mv target/debian/timer-for-harvest_*_amd64.deb .
+      - run: mv target/release/rpmbuild/RPMS/x86_64/timer-for-harvest*.rpm .
 
       - uses: actions/upload-artifact@v2
         with:
           name: packages
           path: |
-            target/debian/timer-for-harvest_*_amd64.deb
-            target/release/rpmbuild/RPMS/x86_64/*.rpm
+            timer-for-harvest_*_amd64.deb
+            timer-for-harvest*.rpm
