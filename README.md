@@ -48,7 +48,8 @@ token to a more secure location, such as
 
 ## Wishlist
 - Idle detection to ask user whether idle time should be subtracted or booked
-  as a new time entry.
+  as a new time entry. For example, using this dbus call when using GNOME:
+  `dbus-send --print-reply --dest=org.gnome.Mutter.IdleMonitor /org/gnome/Mutter/IdleMonitor/Core org.gnome.Mutter.IdleMonitor.GetIdletime`
 - Authentication token storage in [libsecret](https://wiki.gnome.org/Projects/Libsecret).
 - [Improve UI](https://github.com/frenkel/timer-for-harvest/issues/34) to speed up the new entry process.
 
