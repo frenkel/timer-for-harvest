@@ -1,19 +1,33 @@
-name: Tests
-on: [push]
+name: Build packages
+on:
+  release:
+    types:
+      - created
 env:
   CARGO_TERM_COLOR: always
 jobs:
-  cargo-test:
-    runs-on: ubuntu-latest
+  build-deb:
+    runs-on: ubuntu-18.04
     steps:
       - run: sudo apt-get install -y libssl-dev libgtk-3-dev
+      - run: cargo install cargo-deb cargo-rpm
       
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
-          key: target-dir-cache
+          key: target-dir-cache-release
           path: target/
+          
+      - run: cargo deb
+      - run: cargo rpm build
+      - run: find target/release/rpmbuild
+      
+      - run: mv target/debian/timer-for-harvest_*_amd64.deb .
+      - run: mv target/release/rpmbuild/RPMS/x86_64/timer-for-harvest*.rpm .
 
-      - run: cargo build
-      - run: cargo test
-  
+      - uses: actions/upload-artifact@v2
+        with:
+          name: packages
+          path: |
+            timer-for-harvest_*_amd64.deb
+            timer-for-harvest*.rpm
