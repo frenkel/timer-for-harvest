@@ -24,4 +24,4 @@ jobs:
           name: packages
           path: |
             target/debian/timer-for-harvest_*_amd64.deb
-            target/release/rpmbuild/RPMs/*.rpm
+            target/release/rpmbuild/RPMs/x86_64/*.rpm
