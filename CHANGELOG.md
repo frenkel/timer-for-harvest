@@ -3,6 +3,7 @@
 ## [UNRELEASED] - YYYY-MM-DD
 
 - Re-enable the ability to resize the main window, implemented by @mlunax.
+- The license of Timer for Harvest will no longer show up as proprietary in GNOME Software.
 
 ## [0.3.7] - 2021-08-26
 

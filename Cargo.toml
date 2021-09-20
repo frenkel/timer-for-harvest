@@ -6,7 +6,7 @@ version = "0.3.7"
 authors = ["Frank Groeneveld <frank@frankgroeneveld.nl>"]
 edition = "2018"
 readme = "README.md"
-license = "BSD 2-Clause License"
+license = "BSD-2-Clause"
 
 [package.metadata.deb]
 extended-description = "Harvest client implemented using GTK+ and Rust."

@@ -6,7 +6,7 @@ Name: timer-for-harvest
 Summary: Timer for Harvest
 Version: @@VERSION@@
 Release: @@RELEASE@@
-License: BSD 2-Clause License
+License: BSD-2-Clause
 Group: Applications/System
 Source0: %{name}-%{version}.tar.gz
 URL: https://github.com/frenkel/timer-for-harvest
