@@ -2,7 +2,7 @@
 
 ## [UNRELEASED] - YYYY-MM-DD
 
-- 
+- Clear selected task when switching project. Previously an invalid entry was still selected, which stopped the save button from working.
 
 ## [0.3.8] - 2021-09-21
 

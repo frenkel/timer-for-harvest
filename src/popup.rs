@@ -372,6 +372,12 @@ impl Popup {
             .downcast::<gtk::ListStore>()
             .unwrap();
         store.clear();
+        self.task_chooser
+            .get_child()
+            .unwrap()
+            .downcast::<gtk::Entry>()
+            .unwrap()
+            .set_text("");
         for task_assignment in task_assignments {
             store.set(
                 &store.append(),
