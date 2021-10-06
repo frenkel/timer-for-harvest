@@ -275,6 +275,7 @@ impl Popup {
     }
 
     pub fn populate(&mut self, time_entry: TimeEntry) {
+        self.window.set_title("Edit time entry");
         self.time_entry_id = Some(time_entry.id);
         self.save_button.set_label("Save Timer");
         self.hours_input.set_editable(!time_entry.is_running);
