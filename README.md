@@ -57,7 +57,14 @@ token to a more secure location, such as
 If you want to build the applicatin yourself you'll need rust, cargo and the gtk3
 development libraries installed. You can then run `cargo build --release` to generate
 the binary in `target/release/`.
-  
+
+## Uninstall
+
+To ininstall, simply run the following command in a terminal based on your distro: 
+
+- Fedora / RHEL or other RPM-based distros : `sudo dnf remove timer-for-harvest`
+- Debian / Ubuntu / Linux Mint or other apt-based distros: `sudo apt remove timer-for-harvest`
+
 ## Donations
 If you like the software I create, please consider donating through
 [Paypal](https://paypal.me/frankgroeneveld) or
