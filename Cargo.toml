@@ -34,7 +34,7 @@ chrono = "0.4.9"
 glib-sys = "0.9.1"
 hyper = "0.14.12"
 dirs = "2.0.2"
-resolv = { git = "https://github.com/mikedilger/resolv-rs", rev = "bedfffc7c0ebf0790ef72be453e86c7744ae4e3a" }
+resolv = "0.2.0"
 version-compare = "0.0.10"
 gtk = { version = "0.7.0", features = ["v3_22"] }
 gdk = { version = "0.11.0", features = ["v3_22"] }
