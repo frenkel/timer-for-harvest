@@ -50,8 +50,7 @@ impl Ui {
         let application = gtk::Application::new(
             Some("nl.frankgroeneveld.timer-for-harvest"),
             Default::default(),
-        )
-        .unwrap();
+        );
         let header_bar = gtk::HeaderBar::new();
 
         let grid = gtk::Grid::new();
@@ -84,7 +83,7 @@ impl Ui {
         );
 
         application.connect_activate(clone!(to_app, header_bar, grid => move |app| {
-            gtk::timeout_add_seconds(60, clone!(to_app => move || {
+            glib::timeout_add_seconds(60, clone!(to_app => move || {
                 to_app.send(app::Signal::MinutePassed)
                     .expect("Sending message to application thread");
                 glib::Continue(true)
@@ -139,13 +138,11 @@ impl Ui {
                 },
                 Signal::ShowNotice(message) => {
                     let bar = gtk::InfoBar::new();
-                    let content_area = bar.get_content_area().unwrap();
+                    let content_area = bar.content_area();
                     let label = gtk::Label::new(None);
                     label.set_markup(&message);
 
                     content_area
-                        .downcast::<gtk::Container>()
-                        .unwrap()
                         .add(&label);
                     bar.show_all();
                     ui.grid.attach(&bar, 0, 0, 4, 1);
@@ -153,7 +150,7 @@ impl Ui {
             }
             glib::Continue(true)
         });
-        application.run(&[]);
+        application.run();
     }
 
     pub fn main_window(
@@ -186,11 +183,11 @@ impl Ui {
 
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
         window.connect_key_press_event(clone!(to_app => move |_window, event| {
-            if event.get_keyval() == gdk::enums::key::F5 {
+            if event.keyval() == gdk::keys::constants::F5 {
                 to_app.send(app::Signal::RetrieveTimeEntries)
                     .expect("Sending message to application thread");
                 Inhibit(true)
-            } else if event.get_keyval() == gdk::enums::key::n {
+            } else if event.keyval() == gdk::keys::constants::n {
                 to_app.send(app::Signal::NewTimeEntry)
                     .expect("Sending message to application thread");
                 Inhibit(true)
@@ -199,15 +196,15 @@ impl Ui {
             }
         }));
 
-        window.connect_property_has_toplevel_focus_notify(clone!(to_app => move |window| {
-            if window.has_toplevel_focus() {
-                to_app.send(app::Signal::RetrieveTimeEntries)
-                    .expect("Sending message to application thread");
-            }
-        }));
+        // window.connect_property_has_toplevel_focus_notify(clone!(to_app => move |window| {
+        //     if window.has_toplevel_focus() {
+        //         to_app.send(app::Signal::RetrieveTimeEntries)
+        //             .expect("Sending message to application thread");
+        //     }
+        // }));
 
         let button =
-            gtk::Button::new_from_icon_name(Some("list-add-symbolic"), gtk::IconSize::Button);
+            gtk::Button::from_icon_name(Some("list-add-symbolic"), gtk::IconSize::Button);
         header_bar.pack_start(&button);
         button.connect_clicked(clone!(to_app => move |_button| {
             to_app.send(app::Signal::NewTimeEntry)
@@ -216,9 +213,9 @@ impl Ui {
 
         let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 2);
         hbox.set_spacing(0);
-        hbox.get_style_context().add_class(&gtk::STYLE_CLASS_LINKED);
+        hbox.style_context().add_class(&gtk::STYLE_CLASS_LINKED);
         let prev_button =
-            gtk::Button::new_from_icon_name(Some("go-previous-symbolic"), gtk::IconSize::Button);
+            gtk::Button::from_icon_name(Some("go-previous-symbolic"), gtk::IconSize::Button);
         hbox.pack_start(&prev_button, false, false, 0);
         prev_button.connect_clicked(clone!(to_app => move |_button| {
             to_app.send(app::Signal::PrevDate)
@@ -226,7 +223,7 @@ impl Ui {
         }));
 
         let today_button =
-            gtk::Button::new_from_icon_name(Some("go-home-symbolic"), gtk::IconSize::Button);
+            gtk::Button::from_icon_name(Some("go-home-symbolic"), gtk::IconSize::Button);
         hbox.pack_start(&today_button, false, false, 0);
         today_button.connect_clicked(clone!(to_app => move |_button| {
             to_app.send(app::Signal::TodayDate)
@@ -234,7 +231,7 @@ impl Ui {
         }));
 
         let next_button =
-            gtk::Button::new_from_icon_name(Some("go-next-symbolic"), gtk::IconSize::Button);
+            gtk::Button::from_icon_name(Some("go-next-symbolic"), gtk::IconSize::Button);
         hbox.pack_start(&next_button, false, false, 0);
         header_bar.pack_start(&hbox);
         next_button.connect_clicked(clone!(to_app => move |_button| {
@@ -242,7 +239,7 @@ impl Ui {
                 .expect("Sending message to application thread");
         }));
 
-        let scroll_view = gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+        let scroll_view = gtk::ScrolledWindow::new(gtk::Adjustment::NONE, gtk::Adjustment::NONE);
         scroll_view.set_min_content_height(400);
         scroll_view.set_policy(gtk::PolicyType::Never, gtk::PolicyType::Always);
 
@@ -259,12 +256,12 @@ impl Ui {
         let current_height = Arc::new(AtomicI32::new(0));
         grid.connect_size_allocate(
             clone!(scroll_view, current_height => move |_grid, allocation| {
-                if allocation.height > current_height.load(Ordering::SeqCst) {
-                    let adj = scroll_view.get_vadjustment().unwrap();
-                    adj.set_value(adj.get_upper() - adj.get_page_size());
-                    current_height.store(allocation.height, Ordering::SeqCst);
-                } else if allocation.height < current_height.load(Ordering::SeqCst) {
-                    current_height.store(allocation.height, Ordering::SeqCst);
+                if allocation.height() > current_height.load(Ordering::SeqCst) {
+                    let adj = scroll_view.vadjustment();
+                    adj.set_value(adj.upper() - adj.page_size());
+                    current_height.store(allocation.height(), Ordering::SeqCst);
+                } else if allocation.height() < current_height.load(Ordering::SeqCst) {
+                    current_height.store(allocation.height(), Ordering::SeqCst);
                 }
             }),
         );
@@ -284,7 +281,7 @@ impl Ui {
         let mut total_hours = 0.0;
         let mut row_number = total_entries + 1; /* info bar is row 0 */
 
-        for child in self.grid.get_children() {
+        for child in self.grid.children() {
             if !child.is::<gtk::InfoBar>() {
                 self.grid.remove(&child);
             }
@@ -318,18 +315,18 @@ impl Ui {
 
             let hbox = gtk::Box::new(gtk::Orientation::Horizontal, 2);
             hbox.set_spacing(0);
-            hbox.get_style_context().add_class(&gtk::STYLE_CLASS_LINKED);
+            hbox.style_context().add_class(&gtk::STYLE_CLASS_LINKED);
 
             let button: gtk::Button;
             let to_app = self.to_app.clone();
             let id = time_entry.id;
             if time_entry.is_running {
-                button = gtk::Button::new_from_icon_name(
+                button = gtk::Button::from_icon_name(
                     Some("media-playback-stop-symbolic"),
                     gtk::IconSize::Button,
                 );
                 button
-                    .get_style_context()
+                    .style_context()
                     .add_class(&gtk::STYLE_CLASS_SUGGESTED_ACTION);
                 button.connect_clicked(move |button| {
                     button.set_sensitive(false);
@@ -338,7 +335,7 @@ impl Ui {
                         .expect("Sending message to application thread");
                 });
             } else {
-                button = gtk::Button::new_from_icon_name(
+                button = gtk::Button::from_icon_name(
                     Some("media-playback-start-symbolic"),
                     gtk::IconSize::Button,
                 );
@@ -352,7 +349,7 @@ impl Ui {
             button.set_valign(gtk::Align::Center);
             hbox.pack_start(&button, false, false, 0);
 
-            let edit_button = gtk::Button::new_from_icon_name(
+            let edit_button = gtk::Button::from_icon_name(
                 Some("document-edit-symbolic"),
                 gtk::IconSize::Button,
             );

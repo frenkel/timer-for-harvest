@@ -36,7 +36,7 @@ hyper = "0.14.10"
 dirs = "2.0.2"
 resolv = { git = "https://github.com/mikedilger/resolv-rs", rev = "bedfffc7c0ebf0790ef72be453e86c7744ae4e3a" }
 version-compare = "0.0.10"
-gtk = { version = "0.7.0", features = ["v3_22"] }
-gdk = { version = "0.11.0", features = ["v3_22"] }
-gio = { version = "0.7.0", features = ["v2_44"] }
-glib = { version = "0.8.0", features = ["v2_44"] }
+gtk = { version = "0.15.5", features = ["v3_22"] }
+gdk = { version = "0.15.4", features = ["v3_22"] }
+gio = { version = "0.15.11", features = ["v2_58"] }
+glib = { version = "0.15.11", features = ["v2_58"] }

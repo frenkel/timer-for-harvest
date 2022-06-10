@@ -52,7 +52,7 @@ impl Popup {
         window.connect_delete_event(|_, _| Inhibit(false));
         window.add_events(gdk::EventMask::KEY_PRESS_MASK);
         window.connect_key_press_event(|window, event| {
-            if event.get_keyval() == gdk::enums::key::Escape {
+            if event.keyval() == gdk::keys::constants::Escape {
                 window.close();
                 Inhibit(true)
             } else {
@@ -60,16 +60,16 @@ impl Popup {
             }
         });
 
-        window.set_transient_for(Some(&application.get_active_window().unwrap()));
+        window.set_transient_for(Some(&application.active_window().unwrap()));
         application.add_window(&window);
 
         window.show_all();
 
-        let delete_button = gtk::Button::new_with_label("Delete");
+        let delete_button = gtk::Button::with_label("Delete");
         delete_button
-            .get_style_context()
+            .style_context()
             .add_class(&gtk::STYLE_CLASS_DESTRUCTIVE_ACTION);
-        let save_button = gtk::Button::new_with_label("Start Timer");
+        let save_button = gtk::Button::with_label("Start Timer");
         save_button.set_can_default(true);
         let notes_input = gtk::TextView::new();
         notes_input.set_border_width(4);
@@ -77,12 +77,11 @@ impl Popup {
         notes_input.set_accepts_tab(false);
         let hours_input = gtk::Entry::new();
         hours_input
-            .set_property("activates-default", &true)
-            .expect("could not allow default activation");
+            .set_property("activates-default", &true);
         hours_input.set_placeholder_text(Some("00:00"));
 
         hours_input.connect_changed(clone!(save_button => move |hours_input| {
-            if &hours_input.get_text().unwrap() != "" {
+            if &hours_input.text() != "" {
                 save_button.set_label("Save Timer");
             } else {
                 save_button.set_label("Start Timer");
@@ -105,22 +104,21 @@ impl Popup {
     }
 
     fn project_chooser(project_assignments: Vec<ProjectAssignment>) -> gtk::ComboBox {
-        let project_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
+        let project_store = gtk::ListStore::new(&[glib::types::Type::STRING, glib::types::Type::U32]);
         for project_assignment in project_assignments {
             project_store.set(
                 &project_store.append(),
-                &[0, 1],
                 &[
-                    &format!(
+                    (0, &format!(
                         "{} ({})",
                         project_assignment.project.name_and_code(),
                         project_assignment.client.name
-                    ),
-                    &project_assignment.project.id,
+                    )),
+                    (1, &project_assignment.project.id),
                 ],
             );
         }
-        let project_chooser = gtk::ComboBox::new_with_model_and_entry(&project_store);
+        let project_chooser = gtk::ComboBox::with_model_and_entry(&project_store);
         project_chooser.set_entry_text_column(0);
 
         let project_completer = gtk::EntryCompletion::new();
@@ -134,7 +132,7 @@ impl Popup {
             }),
         );
         project_chooser
-            .get_child()
+            .child()
             .unwrap()
             .downcast::<gtk::Entry>()
             .unwrap()
@@ -144,8 +142,8 @@ impl Popup {
     }
 
     fn task_chooser() -> gtk::ComboBox {
-        let task_store = gtk::ListStore::new(&[gtk::Type::String, gtk::Type::U32]);
-        let task_chooser = gtk::ComboBox::new_with_model_and_entry(&task_store);
+        let task_store = gtk::ListStore::new(&[ glib::types::Type::STRING, glib::types::Type::U32]);
+        let task_chooser = gtk::ComboBox::with_model_and_entry(&task_store);
         task_chooser.set_entry_text_column(0);
 
         let task_completer = gtk::EntryCompletion::new();
@@ -160,7 +158,7 @@ impl Popup {
         );
 
         task_chooser
-            .get_child()
+            .child()
             .unwrap()
             .downcast::<gtk::Entry>()
             .unwrap()
@@ -176,7 +174,7 @@ impl Popup {
         self.window.add(&grid);
 
         let scrollable_window =
-            gtk::ScrolledWindow::new(gtk::NONE_ADJUSTMENT, gtk::NONE_ADJUSTMENT);
+            gtk::ScrolledWindow::new(gtk::Adjustment::NONE, gtk::Adjustment::NONE);
         scrollable_window.set_policy(gtk::PolicyType::Automatic, gtk::PolicyType::Automatic);
         scrollable_window.add(&self.notes_input);
         scrollable_window.set_shadow_type(gtk::ShadowType::Out);
@@ -207,50 +205,50 @@ impl Popup {
         let time_entry_id = self.time_entry_id;
         self.save_button.connect_clicked(move |button| {
             button.set_sensitive(false);
-            let project_id = match project_chooser.get_active() {
+            let project_id = match project_chooser.active() {
                 Some(index) => Popup::id_from_combo_box(&project_chooser, index),
                 None => 0,
             };
-            let task_id = match task_chooser.get_active() {
+            let task_id = match task_chooser.active() {
                 Some(index) => Popup::id_from_combo_box(&task_chooser, index),
                 None => 0,
             };
             if project_id > 0 && task_id > 0 {
                 match time_entry_id {
                     None => {
-                        let notes_buffer = notes_input.get_buffer().unwrap();
+                        let notes_buffer = notes_input.buffer().unwrap();
                         to_app
                             .send(app::Signal::StartTimer(
                                 project_id,
                                 task_id,
                                 notes_buffer
-                                    .get_text(
-                                        &notes_buffer.get_start_iter(),
-                                        &notes_buffer.get_end_iter(),
+                                    .text(
+                                        &notes_buffer.start_iter(),
+                                        &notes_buffer.end_iter(),
                                         false,
                                     )
                                     .unwrap()
                                     .to_string(),
-                                duration_str_to_f32(&hours_input.get_text().unwrap()),
+                                duration_str_to_f32(&hours_input.text()),
                             ))
                             .expect("Sending message to background thread");
                     }
                     Some(id) => {
-                        let notes_buffer = notes_input.get_buffer().unwrap();
+                        let notes_buffer = notes_input.buffer().unwrap();
                         to_app
                             .send(app::Signal::UpdateTimer(
                                 id,
                                 project_id,
                                 task_id,
                                 notes_buffer
-                                    .get_text(
-                                        &notes_buffer.get_start_iter(),
-                                        &notes_buffer.get_end_iter(),
+                                    .text(
+                                        &notes_buffer.start_iter(),
+                                        &notes_buffer.end_iter(),
                                         false,
                                     )
                                     .unwrap()
                                     .to_string(),
-                                duration_str_to_f32(&hours_input.get_text().unwrap()),
+                                duration_str_to_f32(&hours_input.text()),
                             ))
                             .expect("Sending message to background thread");
                     }
@@ -263,7 +261,7 @@ impl Popup {
 
         let to_app = self.to_app.clone();
         self.project_chooser
-            .connect_changed(move |project_chooser| match project_chooser.get_active() {
+            .connect_changed(move |project_chooser| match project_chooser.active() {
                 Some(index) => {
                     let project_id = Popup::id_from_combo_box(&project_chooser, index);
                     to_app
@@ -284,7 +282,7 @@ impl Popup {
         ));
 
         match &time_entry.notes {
-            Some(n) => self.notes_input.get_buffer().unwrap().set_text(&n),
+            Some(n) => self.notes_input.buffer().unwrap().set_text(&n),
             None => {}
         }
         self.hours_input
@@ -309,7 +307,7 @@ impl Popup {
             );
 
             let confirmation_response = confirmation_box.run();
-            confirmation_box.destroy();
+            confirmation_box.close();
 
             if confirmation_response == gtk::ResponseType::Yes {
                 to_app
@@ -323,10 +321,10 @@ impl Popup {
     }
 
     fn fuzzy_matching(completion: &gtk::EntryCompletion, key: &str, iter: &gtk::TreeIter) -> bool {
-        let store = completion.get_model().unwrap();
-        let column_number = completion.get_text_column();
+        let store = completion.model().unwrap();
+        let column_number = completion.text_column();
         let row = store
-            .get_value(iter, column_number)
+            .value(iter, column_number)
             .get::<String>()
             .unwrap();
 
@@ -339,21 +337,21 @@ impl Popup {
     }
 
     fn id_from_combo_box(combo_box: &gtk::ComboBox, index: u32) -> u32 {
-        let model = combo_box.get_model().unwrap();
+        let model = combo_box.model().unwrap();
 
-        let iter = model.get_iter_from_string(&format!("{}", index)).unwrap();
-        model.get_value(&iter, 1).get::<u32>().unwrap()
+        let iter = model.iter_from_string(&format!("{}", index)).unwrap();
+        model.value(&iter, 1).get::<u32>().unwrap()
     }
 
     fn iter_from_id(combo_box: &gtk::ComboBox, id: u32) -> Option<gtk::TreeIter> {
         let store = combo_box
-            .get_model()
+            .model()
             .unwrap()
             .downcast::<gtk::ListStore>()
             .unwrap();
-        let iter = store.get_iter_first().unwrap();
+        let iter = store.iter_first().unwrap();
         loop {
-            if store.get_value(&iter, 1).get::<u32>().unwrap() == id {
+            if store.value(&iter, 1).get::<u32>().unwrap() == id {
                 return Some(iter);
             }
             if !store.iter_next(&iter) {
@@ -366,13 +364,13 @@ impl Popup {
     pub fn load_tasks(&self, task_assignments: Vec<TaskAssignment>) {
         let store = self
             .task_chooser
-            .get_model()
+            .model()
             .unwrap()
             .downcast::<gtk::ListStore>()
             .unwrap();
         store.clear();
         self.task_chooser
-            .get_child()
+            .child()
             .unwrap()
             .downcast::<gtk::Entry>()
             .unwrap()
@@ -380,8 +378,7 @@ impl Popup {
         for task_assignment in task_assignments {
             store.set(
                 &store.append(),
-                &[0, 1],
-                &[&task_assignment.task.name, &task_assignment.task.id],
+                &[(0, &task_assignment.task.name), (1, &task_assignment.task.id)],
             );
         }
     }
