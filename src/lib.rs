@@ -304,7 +304,7 @@ impl Harvest {
             user.id, from, till
         );
         match self.api_get_request(&url) {
-            Ok(mut res) => {
+            Ok(res) => {
                 let body = &res.text().unwrap();
                 let page: TimeEntryPage = serde_json::from_str(body)
                     .expect(&format!("Unexpected time entry page structure: {}", body).to_string());
@@ -348,7 +348,7 @@ impl Harvest {
             timer.hours = Some(hours);
         }
 
-        let mut res = self.api_post_request(&url, &timer);
+        let res = self.api_post_request(&url, &timer);
         let body = &res.text().unwrap();
         serde_json::from_str(body)
             .expect(&format!("Unexpected timer structure: {}", body).to_string())
@@ -360,7 +360,7 @@ impl Harvest {
             time_entry_id
         );
 
-        let mut res = self.api_patch_request(&url, &());
+        let res = self.api_patch_request(&url, &());
         let body = &res.text().unwrap();
         serde_json::from_str(body)
             .expect(&format!("Unexpected timer structure: {}", body).to_string())
@@ -372,7 +372,7 @@ impl Harvest {
             time_entry_id
         );
 
-        let mut res = self.api_patch_request(&url, &());
+        let res = self.api_patch_request(&url, &());
         let body = &res.text().unwrap();
         serde_json::from_str(body)
             .expect(&format!("Unexpected timer structure: {}", body).to_string())
@@ -401,7 +401,7 @@ impl Harvest {
                 spent_date: Some(spent_date),
             };
 
-            let mut res = self.api_patch_request(&url, &t2);
+            let res = self.api_patch_request(&url, &t2);
             let body = &res.text().unwrap();
             serde_json::from_str(body)
                 .expect(&format!("Unexpected time entry structure: {}", body).to_string())
@@ -415,7 +415,7 @@ impl Harvest {
                 hours: Some(hours),
                 spent_date: Some(spent_date),
             };
-            let mut res = self.api_patch_request(&url, &timer);
+            let res = self.api_patch_request(&url, &timer);
             let body = &res.text().unwrap();
             serde_json::from_str(body)
                 .expect(&format!("Unexpected time entry structure: {}", body).to_string())
@@ -425,14 +425,14 @@ impl Harvest {
     pub fn delete_timer(&self, timer_id: u32) -> TimeEntry {
         let url = format!("https://api.harvestapp.com/v2/time_entries/{}", timer_id);
 
-        let mut res = self.api_delete_request(&url);
+        let res = self.api_delete_request(&url);
         let body = &res.text().unwrap();
         serde_json::from_str(body)
             .expect(&format!("Unexpected timer structure: {}", body).to_string())
     }
 
-    fn api_get_request(&self, url: &str) -> Result<reqwest::Response, reqwest::Error> {
-        let client = reqwest::Client::new();
+    fn api_get_request(&self, url: &str) -> Result<reqwest::blocking::Response, reqwest::Error> {
+        let client = reqwest::blocking::Client::new();
 
         client
             .get(url)
@@ -446,8 +446,8 @@ impl Harvest {
         &self,
         url: &str,
         json: &T,
-    ) -> reqwest::Response {
-        let client = reqwest::Client::new();
+    ) -> reqwest::blocking::Response {
+        let client = reqwest::blocking::Client::new();
 
         client
             .post(url)
@@ -459,8 +459,8 @@ impl Harvest {
             .unwrap()
     }
 
-    fn api_delete_request(&self, url: &str) -> reqwest::Response {
-        let client = reqwest::Client::new();
+    fn api_delete_request(&self, url: &str) -> reqwest::blocking::Response {
+        let client = reqwest::blocking::Client::new();
 
         client
             .delete(url)
@@ -475,8 +475,8 @@ impl Harvest {
         &self,
         url: &str,
         json: &T,
-    ) -> reqwest::Response {
-        let client = reqwest::Client::new();
+    ) -> reqwest::blocking::Response {
+        let client = reqwest::blocking::Client::new();
 
         client
             .patch(url)
