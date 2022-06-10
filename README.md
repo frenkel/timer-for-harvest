@@ -54,7 +54,7 @@ token to a more secure location, such as
 - [Improve UI](https://github.com/frenkel/timer-for-harvest/issues/34) to speed up the new entry process.
 
 ## Building
-If you want to build the applicatin yourself you'll need rust, cargo and the gtk3
+If you want to build the application yourself you'll need rust, cargo, bindgen, clang and the gtk3
 development libraries installed. You can then run `cargo build --release` to generate
 the binary in `target/release/`.
 
