@@ -907,8 +907,7 @@ checksum = "349d5a591cd28b49e1d1037471617a32ddcda5731b99419008085f72d5a53836"
 [[package]]
 name = "libresolv-sys"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1ff4d206eadba2734749aa66e254f14d478633b7bacf7f5c6ec9384c7ab09eb2"
+source = "git+https://github.com/mikedilger/resolv-rs?rev=bedfffc7c0ebf0790ef72be453e86c7744ae4e3a#bedfffc7c0ebf0790ef72be453e86c7744ae4e3a"
 dependencies = [
  "libc",
 ]
@@ -1439,8 +1438,7 @@ dependencies = [
 [[package]]
 name = "resolv"
 version = "0.2.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e6f29bf8dc2d96825398de000d35d767a6ea3369c7797e4065b6db7ed0063b31"
+source = "git+https://github.com/mikedilger/resolv-rs?rev=bedfffc7c0ebf0790ef72be453e86c7744ae4e3a#bedfffc7c0ebf0790ef72be453e86c7744ae4e3a"
 dependencies = [
  "byteorder",
  "libc",
