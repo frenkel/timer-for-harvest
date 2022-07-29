@@ -2,6 +2,13 @@
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+## [0.3.10] - 2022-07-29
+
+- Build against OpenSSL 3 for Ubuntu 22.04. 
+
+## [0.3.9] - 2022-06-11
+
+- Updates to dependencies. These dependencies needed to be updated because of various security issues.
 - Clear selected task when switching project. Previously an invalid entry was still selected, which stopped the save button from working.
 
 ## [0.3.8] - 2021-09-21
