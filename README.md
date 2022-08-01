@@ -12,7 +12,7 @@ and the various BSD's.
 On the Timer for Harvest github page, click on the 
 [releases link](https://github.com/frenkel/timer-for-harvest/releases). The 
 newest release is listed at the top of the page. It contains pre-build 
-binaries for Ubuntu 20.04 and Fedora 32, as well as other distributions. 
+binaries for Ubuntu 20.04+ and Fedora 34+, as well as other distributions. 
 You will be notified of new releases by a message in the main window.
 
 ## Usage
