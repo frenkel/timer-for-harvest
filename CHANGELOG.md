@@ -2,6 +2,10 @@
 
 ## [UNRELEASED] - YYYY-MM-DD
 
+## [0.3.10] - 2022-08-01
+
+- Build against OpenSSL 1.1 for Ubuntu 20.04.
+
 ## [0.3.10] - 2022-07-29
 
 - Build against OpenSSL 3 for Ubuntu 22.04. 
