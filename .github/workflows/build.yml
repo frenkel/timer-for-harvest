@@ -8,7 +8,7 @@ env:
   CARGO_TERM_COLOR: always
 jobs:
   old_build:
-    runs-on: ubuntu-20.04
+    runs-on: ubuntu-18.04
     steps:
       - run: sudo apt-get install -y libssl-dev libgtk-3-dev
       - run: cargo install cargo-deb cargo-rpm
@@ -16,25 +16,22 @@ jobs:
       - uses: actions/checkout@v2
       - uses: actions/cache@v2
         with:
-          key: target-dir-cache-release
+          key: target-dir-cache-old-release
           path: target/
 
       # needed on older glibc
       - run:  sed -i 's/resolv.*/resolv = "0.2.0"/' Cargo.toml
 
       - run: cargo deb
-      - run: cargo rpm build
 
       - run: mv target/debian/timer-for-harvest_*_amd64.deb .
-      - run: mv target/release/rpmbuild/RPMS/x86_64/timer-for-harvest*.rpm .
-      - run: sha256sum *.deb *.rpm > SHA256SUM
+      - run: sha256sum *.deb > SHA256SUM
 
       - uses: actions/upload-artifact@v2
         with:
-          name: packages
+          name: old_openssl
           path: |
             timer-for-harvest_*_amd64.deb
-            timer-for-harvest*.rpm
             SHA256SUM
   build:
     runs-on: ubuntu-22.04
@@ -57,7 +54,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: packages
+          name: new_openssl_packages
           path: |
             timer-for-harvest_*_amd64.deb
             timer-for-harvest*.rpm

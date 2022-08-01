@@ -1219,7 +1219,7 @@ dependencies = [
 
 [[package]]
 name = "timer-for-harvest"
-version = "0.3.10"
+version = "0.3.11"
 dependencies = [
  "chrono",
  "dirs",
